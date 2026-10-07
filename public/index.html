@@ -1,0 +1,2257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk Email Automation & KPI Reporting Agent</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Quill WYSIWYG Rich Text Editor -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+<style>
+  :root {
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --primary-light: #eff6ff;
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --danger-light: #fee2e2;
+    --purple: #8b5cf6;
+    --purple-light: #ede9fe;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --border-hover: #cbd5e1;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -2px rgba(15, 23, 42, 0.03);
+    --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  header {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1e293b;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .badge-provider {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+  .badge-provider .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 2s infinite;
+  }
+  .badge-provider b { color: #38bdf8; text-transform: uppercase; }
+
+  /* Provider Switcher Pill */
+  .provider-pill-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 9999px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .provider-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .provider-pill-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .provider-pill-btn.active#btnPillGmail {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+  }
+  .provider-pill-btn.active#btnPillSes {
+    background: #d97706;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(217, 119, 6, 0.4);
+  }
+  .provider-pill-btn.active#btnPillMock {
+    background: #475569;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(71, 85, 105, 0.4);
+  }
+
+  .live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: #1e293b;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid #334155;
+    transition: all 0.2s;
+  }
+  .live-indicator.active { color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
+
+  @keyframes pulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+  }
+
+  /* Main Container */
+  main {
+    max-width: 1240px;
+    margin: 28px auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: box-shadow 0.2s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-md);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .step-num {
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    color: white;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Form Controls */
+  .form-group {
+    margin-bottom: 18px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  input[type="text"], input[type="file"], textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    background: #ffffff;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), #2563eb);
+    color: white;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+  }
+  .btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+    transform: translateY(-1px);
+  }
+  .btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+  }
+  .btn-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+  }
+  .btn-outline {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover {
+    background: #f8fafc;
+    border-color: var(--border-hover);
+  }
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Tabs */
+  .tab-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--text); background: #f1f5f9; }
+  .tab-btn.active {
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+
+  /* File Dropzone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--primary);
+    background: #f0f7ff;
+  }
+  .dropzone-icon {
+    font-size: 36px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .dropzone-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .dropzone-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Variable Chips */
+  .var-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .var-btn {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.15s;
+  }
+  .var-btn:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+
+  /* Quill Editor Overrides */
+  .editor-wrapper {
+    background: #ffffff;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .ql-toolbar.ql-snow {
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    padding: 10px;
+  }
+  .ql-container.ql-snow {
+    border: none;
+    font-size: 14px;
+    font-family: inherit;
+    min-height: 220px;
+  }
+
+  /* HTML Source Code Editor */
+  #htmlCodeInput {
+    width: 100%;
+    min-height: 280px;
+    font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px 16px;
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+    outline: none;
+    box-sizing: border-box;
+    tab-size: 2;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  #htmlCodeInput:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(0,0,0,0.15);
+  }
+
+  /* Attachments Box */
+  .attachments-container {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #f8fafc;
+  }
+  .attachment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .attachment-chip .remove-att-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 14px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--border);
+  }
+  .kpi-card.kpi-sent::before { background: var(--primary); }
+  .kpi-card.kpi-delivered::before { background: var(--success); }
+  .kpi-card.kpi-opened::before { background: var(--purple); }
+  .kpi-card.kpi-clicked::before { background: var(--warning); }
+  .kpi-card.kpi-failed::before { background: var(--danger); }
+
+  .kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .kpi-val {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .kpi-sub {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+    color: var(--text-muted);
+  }
+
+  /* Multi-Progress Bar */
+  .progress-bar-container {
+    background: #e2e8f0;
+    height: 10px;
+    border-radius: 9999px;
+    overflow: hidden;
+    display: flex;
+    margin: 14px 0 20px 0;
+  }
+  .progress-seg {
+    height: 100%;
+    transition: width 0.4s ease;
+  }
+  .progress-delivered { background: var(--success); }
+  .progress-opened { background: var(--purple); }
+  .progress-sent { background: var(--primary); }
+  .progress-failed { background: var(--danger); }
+
+  /* Table */
+  .table-responsive {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: white;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+  th {
+    background: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text);
+    vertical-align: middle;
+  }
+  tr:hover td {
+    background: #f8fafc;
+  }
+
+  /* Status Badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-PENDING { background: #f1f5f9; color: #475569; }
+  .status-QUEUED { background: #e0f2fe; color: #0284c7; }
+  .status-SENT { background: var(--primary-light); color: var(--primary-hover); }
+  .status-DELIVERED { background: var(--success-light); color: #065f46; }
+  .status-OPENED { background: var(--purple-light); color: #5b21b6; }
+  .status-CLICKED { background: var(--warning-light); color: #92400e; }
+  .status-FAILED, .status-BOUNCED, .status-REJECTED { background: var(--danger-light); color: #991b1b; }
+
+  /* Alerts */
+  .alert {
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+    margin-bottom: 18px;
+    animation: fadeIn 0.2s ease;
+  }
+  .alert-success { background: var(--success-light); color: #065f46; border: 1px solid #a7f3d0; }
+  .alert-error { background: var(--danger-light); color: #991b1b; border: 1px solid #fecaca; }
+
+  /* Pagination */
+  .pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: #f8fafc;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .pagination-info {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .pagination-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Filter bar */
+  .filter-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .filter-pill {
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f5f9;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-pill:hover { background: #e2e8f0; color: var(--text); }
+  .filter-pill.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  .modal-box {
+    background: white;
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 520px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-logo">✉️</div>
+    <div>
+      <h1>Bulk Email Agent</h1>
+    </div>
+  </div>
+  <div class="header-actions">
+    <!-- Interactive Provider Toggle Pill -->
+    <div class="provider-pill-toggle" title="Switch email delivery provider">
+      <button type="button" class="provider-pill-btn active" id="btnPillGmail" onclick="switchActiveProvider('gmail')">
+        <span>✉️</span> Gmail SMTP
+      </button>
+      <button type="button" class="provider-pill-btn" id="btnPillSes" onclick="switchActiveProvider('ses')">
+        <span>⚡</span> Amazon SES
+      </button>
+      <button type="button" class="provider-pill-btn" id="btnPillMock" onclick="switchActiveProvider('mock')">
+        <span>🧪</span> Mock
+      </button>
+    </div>
+
+    <!-- Provider Config & Diagnostics modal trigger -->
+    <button type="button" class="btn btn-outline btn-sm" onclick="openProviderModal()" style="border-color:#334155; color:#38bdf8; display:flex; align-items:center; gap:6px;" title="View & Test Provider Credentials">
+      ⚙️ <span id="providerQuickBadge">Gmail</span>
+    </button>
+
+    <div class="live-indicator active" id="liveToggle" onclick="toggleAutoRefresh()">
+      <span>●</span> <span id="liveText">Live (2s)</span>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="openTestEmailModal()" style="border-color:#334155; color:#cbd5e1;">
+      🧪 Test Delivery
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- Global Alerts -->
+  <div id="globalAlert" class="alert"></div>
+
+  <!-- Step 1: Upload Recipients -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><span class="step-num">1</span> Import Recipients (.xlsx / .csv)</h2>
+      <button class="btn btn-outline btn-sm" onclick="loadDemoData()">Load Sample Recipients</button>
+    </div>
+
+    <div class="tab-group">
+      <button type="button" class="tab-btn active" id="tabFileBtn" onclick="switchRecipientTab('file')">📁 Upload File (.xlsx / .csv)</button>
+      <button type="button" class="tab-btn" id="tabManualBtn" onclick="switchRecipientTab('manual')">✍️ Paste List</button>
+    </div>
+
+    <div id="tabFileContent">
+      <div class="dropzone" id="dropzoneArea" onclick="document.getElementById('recipientFile').click()">
+        <div class="dropzone-icon">📥</div>
+        <div class="dropzone-title">Click to select or drag & drop .xlsx or .csv</div>
+        <div class="dropzone-desc">Must contain an <code>email</code> column. Optional <code>name</code> and <code>company</code> columns supported.</div>
+        <input type="file" id="recipientFile" accept=".xlsx,.csv" style="display:none;" onchange="autoImportFile()">
+      </div>
+    </div>
+
+    <div id="tabManualContent" style="display:none;">
+      <label for="manualRecipients">Paste comma/tab-separated list (email, name, company):</label>
+      <textarea id="manualRecipients" rows="5" placeholder="alice@example.com, Alice Smith, Acme Corp&#10;bob@example.com, Bob Jones, Globex" oninput="parseManualRecipients()"></textarea>
+    </div>
+
+    <div id="validationStatus" style="display:none; margin-top:16px;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span class="attachment-chip" id="chipTotal" style="background:#f1f5f9;">Total: 0</span>
+        <span class="attachment-chip" id="chipValid" style="background:var(--success-light); color:#065f46; border-color:#a7f3d0;">✓ Valid: 0</span>
+        <span class="attachment-chip" id="chipInvalid" style="background:var(--danger-light); color:#991b1b; border-color:#fecaca;">✗ Invalid: 0</span>
+        <span class="attachment-chip" id="chipDuplicate" style="background:var(--warning-light); color:#92400e; border-color:#fde68a;">⚠ Duplicates: 0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: Compose Email Campaign -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><span class="step-num">2</span> Compose Email Campaign (Rich Text & Attachments)</h2>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillSampleCampaignText()">Template</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="sendTestDraft()">🧪 Send Me Sample</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="campaignNameInput">Campaign Name <span style="color:var(--danger)">*</span></label>
+      <input type="text" id="campaignNameInput" placeholder="e.g. Q4 Growth Outreach" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <label for="campaignSubjectInput">Email Subject <span style="color:var(--danger)">*</span></label>
+      <div class="var-buttons">
+        <span style="font-size:12px; color:var(--text-muted);">Insert Tag:</span>
+        <button type="button" class="var-btn" onclick="insertSubjectTag('{{name}}')">{{name}}</button>
+        <button type="button" class="var-btn" onclick="insertSubjectTag('{{company}}')">{{company}}</button>
+        <button type="button" class="var-btn" onclick="insertSubjectTag('{{email}}')">{{email}}</button>
+      </div>
+      <input type="text" id="campaignSubjectInput" placeholder="Special opportunity for {{name}} at {{company}}" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+        <label style="margin-bottom:0;">Email Body (Rich Text & Full HTML / CSS Supported) <span style="color:var(--danger)">*</span></label>
+        <div class="tab-group" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">
+          <button type="button" class="tab-btn active" id="tabEditorVisualBtn" onclick="switchEditorMode('visual')">📝 Visual Rich Text</button>
+          <button type="button" class="tab-btn" id="tabEditorHtmlBtn" onclick="switchEditorMode('html')">&lt;/&gt; HTML Code</button>
+        </div>
+      </div>
+
+      <div class="var-buttons" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span style="font-size:12px; color:var(--text-muted);">Insert Tag:</span>
+          <button type="button" class="var-btn" onclick="insertEditorTag('{{name}}')">+ {{name}}</button>
+          <button type="button" class="var-btn" onclick="insertEditorTag('{{company}}')">+ {{company}}</button>
+          <button type="button" class="var-btn" onclick="insertEditorTag('{{email}}')">+ {{email}}</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span style="font-size:12px; color:var(--text-muted);">HTML Snippets:</span>
+          <button type="button" class="var-btn" onclick="insertHtmlSnippet('button')">🔘 CTA Button</button>
+          <button type="button" class="var-btn" onclick="insertHtmlSnippet('table')">📊 Data Table</button>
+          <button type="button" class="var-btn" onclick="insertHtmlSnippet('card')">🃏 Card Box</button>
+          <button type="button" class="var-btn" onclick="loadHtmlTemplate()">🎨 Full HTML Template</button>
+        </div>
+      </div>
+
+      <!-- Visual Quill Editor -->
+      <div class="editor-wrapper" id="visualEditorWrapper">
+        <div id="editor-container"></div>
+      </div>
+
+      <!-- Raw HTML Code Editor -->
+      <div id="htmlEditorWrapper" style="display:none;">
+        <textarea id="htmlCodeInput" rows="15" placeholder="<!-- Paste or type your HTML code here. Supports inline CSS, &lt;table&gt;, &lt;div&gt;, &lt;style&gt;, and variables {{name}}, {{company}}, {{email}} -->" oninput="onHtmlCodeInput()"></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:12px; color:var(--text-muted); flex-wrap:wrap; gap:8px;">
+          <span>💡 <strong>HTML Code Mode:</strong> Type or paste any HTML. It will be parsed and rendered in the live preview and in outgoing emails.</span>
+          <button type="button" class="btn btn-outline btn-sm" style="padding:4px 10px; font-size:11px;" onclick="formatHtmlCode()">⚡ Format HTML</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attachments Manager -->
+    <div class="form-group">
+      <label>File Attachments (PDFs, Documents, Spreadsheets, Images)</label>
+      <div class="attachments-container">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--text-muted);">Files will be attached and delivered with every email:</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('attachmentInput').click()">
+            📎 Add Attachment
+          </button>
+          <input type="file" id="attachmentInput" multiple style="display:none;" onchange="handleAttachmentUpload(this)">
+        </div>
+        <div class="attachment-list" id="attachmentList">
+          <span id="noAttachmentsText" style="font-size:12px; color:var(--text-muted);">No attachments added yet.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Tab Toggle -->
+    <div style="margin-top:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div class="tab-group" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">
+          <button type="button" class="tab-btn active" id="btnTabPreview" onclick="togglePreviewTab(true)">👁️ Live Email Preview</button>
+          <button type="button" class="tab-btn" id="btnTabHidePreview" onclick="togglePreviewTab(false)">Hide Preview</button>
+        </div>
+        <div class="tab-group" id="previewSubTabs" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">
+          <button type="button" class="tab-btn active" id="btnPreviewRendered" onclick="switchPreviewMode('rendered')">🌐 Rendered View</button>
+          <button type="button" class="tab-btn" id="btnPreviewSource" onclick="switchPreviewMode('source')">&lt;/&gt; Parsed HTML Source</button>
+        </div>
+      </div>
+      <div id="previewContainer" style="background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); padding:18px;">
+        <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">
+          <strong>Personalized for sample recipient:</strong> <span id="previewRecipientNote" style="color:var(--primary); font-weight:600;"></span>
+        </div>
+        <div style="font-size:14px; margin-bottom:12px;"><strong>Subject:</strong> <span id="previewSubjectText">(No subject)</span></div>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:20px; min-height:120px; overflow-x:auto;" id="previewBodyText">
+          (No content yet)
+        </div>
+        <pre id="previewBodySource" style="display:none; background:#0f172a; color:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:16px; font-family:'JetBrains Mono', Consolas, monospace; font-size:12px; line-height:1.5; white-space:pre-wrap; word-break:break-all; max-height:400px; overflow-y:auto; margin:0;"></pre>
+      </div>
+    </div>
+
+    <!-- Start Button -->
+    <div style="margin-top:24px; display:flex; align-items:center; gap:16px;">
+      <button class="btn btn-danger" id="startBtn" onclick="createAndStartCampaign()" style="font-size:15px; padding:12px 28px;">
+        🚀 START CAMPAIGN
+      </button>
+      <div style="font-size:12px; color:var(--text-muted);">
+        🔒 Emails are sent via your authenticated Gmail account and delivered to recipients' inboxes.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3: Performance & KPIs -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><span class="step-num">3</span> Campaign Performance & Delivery KPIs</h2>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <select id="campaignSelector" onchange="onSelectCampaign(this.value)" style="width: auto; padding: 6px 12px; font-weight:600;">
+          <option value="">Select a Campaign...</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="loadCampaignsList()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div id="campaignMeta" style="font-size:13px; color:var(--text-muted); margin-bottom:12px; display:none;">
+      <strong>Campaign:</strong> <span id="activeCampaignName" style="color:var(--text); font-weight:700;"></span> |
+      <strong>Started:</strong> <span id="activeCampaignStarted"></span> |
+      <strong>Status:</strong> <span id="activeCampaignStatus" style="font-weight:700;"></span>
+    </div>
+
+    <!-- Multi Progress Bar -->
+    <div class="progress-bar-container">
+      <div class="progress-seg progress-opened" id="barOpened" title="Opened" style="width:0%;"></div>
+      <div class="progress-seg progress-delivered" id="barDelivered" title="Delivered" style="width:0%;"></div>
+      <div class="progress-seg progress-sent" id="barSent" title="Sent" style="width:0%;"></div>
+      <div class="progress-seg progress-failed" id="barFailed" title="Failed" style="width:0%;"></div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total</div>
+        <div class="kpi-val" id="kpi_total">0</div>
+        <div class="kpi-sub" id="kpi_valid_sub">0 Valid</div>
+      </div>
+      <div class="kpi-card kpi-sent">
+        <div class="kpi-label">Sent</div>
+        <div class="kpi-val" id="kpi_sent" style="color:var(--primary);">0</div>
+        <div class="kpi-sub" id="kpi_sent_pct">0% of list</div>
+      </div>
+      <div class="kpi-card kpi-delivered">
+        <div class="kpi-label">Delivered</div>
+        <div class="kpi-val" id="kpi_delivered" style="color:var(--success);">0</div>
+        <div class="kpi-sub" id="kpi_deliv_pct" style="color:var(--success);">0% Delivery Rate</div>
+      </div>
+      <div class="kpi-card kpi-opened">
+        <div class="kpi-label">Opened</div>
+        <div class="kpi-val" id="kpi_opened" style="color:var(--purple);">0</div>
+        <div class="kpi-sub" id="kpi_open_pct" style="color:var(--purple);">0% Open Rate</div>
+      </div>
+      <div class="kpi-card kpi-clicked">
+        <div class="kpi-label">Clicked</div>
+        <div class="kpi-val" id="kpi_clicked" style="color:var(--warning);">0</div>
+        <div class="kpi-sub" id="kpi_click_pct">0% Click Rate</div>
+      </div>
+      <div class="kpi-card kpi-failed">
+        <div class="kpi-label">Failed</div>
+        <div class="kpi-val" id="kpi_failed" style="color:var(--danger);">0</div>
+        <div class="kpi-sub" id="kpi_fail_sub">0 Issues</div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap:wrap;">
+      <a id="csvLink" class="btn btn-outline btn-sm" href="#" target="_blank" style="pointer-events:none; opacity:0.5;">
+        📥 Export CSV
+      </a>
+      <a id="xlsxLink" class="btn btn-outline btn-sm" href="#" target="_blank" style="pointer-events:none; opacity:0.5;">
+        📊 Export Excel (.xlsx)
+      </a>
+    </div>
+  </section>
+
+  <!-- Step 4: Recipient Delivery Status & Tracking Table -->
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><span class="step-num">4</span> Recipient Status & Real-time Open Tracking</h2>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input type="text" id="searchInput" placeholder="Search by email, name or company..." style="max-width: 280px; padding: 6px 12px;" oninput="onSearchChange()">
+      </div>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="filter-pills">
+      <div class="filter-pill active" onclick="setFilter('ALL', this)">All (<span id="count_all">0</span>)</div>
+      <div class="filter-pill" onclick="setFilter('DELIVERED', this)">Delivered (<span id="count_delivered">0</span>)</div>
+      <div class="filter-pill" onclick="setFilter('OPENED', this)">Opened (<span id="count_opened">0</span>)</div>
+      <div class="filter-pill" onclick="setFilter('SENT', this)">Sent (<span id="count_sent">0</span>)</div>
+      <div class="filter-pill" onclick="setFilter('PENDING', this)">Pending (<span id="count_pending">0</span>)</div>
+      <div class="filter-pill" onclick="setFilter('FAILED', this)">Failed (<span id="count_failed">0</span>)</div>
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Status</th>
+            <th>Sent At</th>
+            <th>Delivered At</th>
+            <th>Opened At</th>
+            <th>Actions / Test Open</th>
+          </tr>
+        </thead>
+        <tbody id="recipientRows">
+          <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:32px;">No active campaign selected or recipients to show.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination-bar" id="paginationBar" style="display:none;">
+        <div class="pagination-info" id="paginationInfo">Showing 0 of 0</div>
+        <div class="pagination-controls">
+          <button class="btn btn-outline btn-sm" id="prevPageBtn" onclick="changePage(-1)">← Previous</button>
+          <span style="font-size:13px; font-weight:600;" id="pageIndicator">Page 1 of 1</span>
+          <button class="btn btn-outline btn-sm" id="nextPageBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Provider Configuration & Verification Modal -->
+<div class="modal-overlay" id="providerConfigModal">
+  <div class="modal-box" style="max-width: 680px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="margin:0; font-size:18px;">⚙️ Delivery Provider Settings & Verification</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeProviderModal()" style="padding:2px 8px; font-size:13px;">✕</button>
+    </div>
+    <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+      Toggle between <strong>Gmail SMTP</strong> and <strong>Amazon SES</strong> for your campaigns. You can test connectivity and verify credentials below.
+    </p>
+
+    <!-- Provider Cards Grid -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+      <!-- Gmail Card -->
+      <div id="cardProviderGmail" style="border:2px solid #3b82f6; border-radius:8px; padding:16px; background:#f8fafc; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:20px;">✉️</span>
+              <strong style="font-size:15px;">Gmail SMTP</strong>
+            </div>
+            <span class="attachment-chip" id="badgeStatusGmail" style="font-size:11px; padding:2px 8px; background:#dcfce7; color:#15803d; border-color:#86efac;">Active</span>
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+            <div><strong>Host:</strong> <span id="gmailHostText">smtp.gmail.com:465</span></div>
+            <div><strong>Account:</strong> <span id="gmailUserText">arpitshrivas377@gmail.com</span></div>
+          </div>
+          <p style="font-size:12px; color:#64748b; margin:0 0 12px 0; line-height:1.4;">
+            Direct TLS connection using your Gmail Google App Password.
+          </p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button type="button" class="btn btn-primary btn-sm" id="btnActivateGmail" onclick="switchActiveProvider('gmail')" style="width:100%; justify-content:center;">
+            ✓ Active Provider
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnTestGmail" onclick="verifyProviderConnection('gmail')" style="width:100%; justify-content:center; font-size:11px;">
+            🔍 Test Gmail Connection
+          </button>
+        </div>
+      </div>
+
+      <!-- Amazon SES Card -->
+      <div id="cardProviderSes" style="border:1px solid var(--border); border-radius:8px; padding:16px; background:#f8fafc; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:20px;">⚡</span>
+              <strong style="font-size:15px;">Amazon SES</strong>
+            </div>
+            <span class="attachment-chip" id="badgeStatusSes" style="font-size:11px; padding:2px 8px; background:#f1f5f9; color:#475569;">Ready</span>
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+            <div><strong>Mode:</strong> <span id="sesModeText">AWS SDK / SMTP</span></div>
+            <div><strong>Region:</strong> <span id="sesRegionText">us-east-1</span></div>
+          </div>
+          <p style="font-size:12px; color:#64748b; margin:0 0 12px 0; line-height:1.4;">
+            Enterprise cloud delivery engine supporting high throughput via AWS SDK or SES SMTP.
+          </p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button type="button" class="btn btn-outline btn-sm" id="btnActivateSes" onclick="switchActiveProvider('ses')" style="width:100%; justify-content:center; border-color:#d97706; color:#d97706;">
+            ⚡ Switch to Amazon SES
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnTestSes" onclick="verifyProviderConnection('ses')" style="width:100%; justify-content:center; font-size:11px;">
+            🔍 Test SES Connection
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Verification Output Banner -->
+    <div id="providerVerifyResult" style="display:none; font-size:12px; padding:10px 14px; border-radius:6px; margin-bottom:14px;"></div>
+
+    <!-- Help & Setup Info -->
+    <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:12px; font-size:12px; color:#475569;">
+      <strong>💡 Configuring Amazon SES in <code style="color:#0f172a;">.env</code>:</strong>
+      <div style="margin-top:6px; line-height:1.5;">
+        Add your AWS IAM keys: <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">AWS_ACCESS_KEY_ID</code>, <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">AWS_SECRET_ACCESS_KEY</code>, <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">AWS_REGION</code><br>
+        <strong>OR</strong> your SES SMTP credentials: <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">SES_SMTP_USER</code>, <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">SES_SMTP_PASS</code>, <code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">SES_REGION</code>.<br>
+        <em>Make sure your sender address (<code style="background:#e2e8f0; padding:1px 4px; border-radius:3px;">EMAIL_FROM</code>) is verified in the AWS SES Console.</em>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+      <button class="btn btn-outline btn-sm" onclick="closeProviderModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Email Modal -->
+<div class="modal-overlay" id="testEmailModal">
+  <div class="modal-box">
+    <h3 style="margin-top:0; font-size:18px;">🧪 Send Test Delivery (<span id="testModalProviderLabel">Gmail</span>)</h3>
+    <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+      Send a test email to your inbox to verify formatting, font colors, and attachments before sending to all recipients.
+    </p>
+    <div class="form-group">
+      <label>Send Test To:</label>
+      <input type="text" id="testEmailTarget" value="arpitshrivas377@gmail.com">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+      <button class="btn btn-outline btn-sm" onclick="closeTestEmailModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="testSendConfirmBtn" onclick="executeTestSend()">Send Test Now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let quill = null;
+  let currentEditorMode = 'visual';
+  let currentPreviewMode = 'rendered';
+  let validatedRecipients = [];
+  let currentCampaignId = null;
+  let allRecipientsData = [];
+  let uploadedAttachments = [];
+  let pollInterval = null;
+  let autoRefreshEnabled = true;
+
+  // Pagination & Filtering state
+  let currentFilter = 'ALL';
+  let searchQuery = '';
+  let currentPage = 1;
+  const pageSize = 25;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    initQuillEditor();
+    checkHealth();
+    loadCampaignsList();
+    setupDropzone();
+  });
+
+  function initQuillEditor() {
+    if (typeof Quill !== 'undefined') {
+      const toolbarOptions = [
+        [{ 'header': [1, 2, 3, false] }],
+        [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'blockquote', 'code-block'],
+        ['clean']
+      ];
+
+      quill = new Quill('#editor-container', {
+        theme: 'snow',
+        modules: { toolbar: toolbarOptions },
+        placeholder: 'Write your email here... Use formatting, colors, links, or switch to HTML Code mode!'
+      });
+
+      quill.on('text-change', () => {
+        updatePreview();
+      });
+
+      // Set default content
+      const defaultContent = '<p>Hi {{name}},</p><p><br></p><p>We have an exciting announcement regarding your work at <strong>{{company}}</strong>.</p><p><br></p><p>Best regards,<br>The Team</p>';
+      quill.root.innerHTML = defaultContent;
+      const codeInput = document.getElementById('htmlCodeInput');
+      if (codeInput) codeInput.value = defaultContent;
+    }
+    updatePreview();
+  }
+
+  function decodeHtmlIfNeeded(str) {
+    if (!str) return '';
+    if (/&lt;\/?(html|head|body|p|div|span|h[1-6]|table|thead|tbody|tr|td|th|ul|ol|li|br|hr|b|i|strong|em|a|img|style|blockquote|pre|code|button|section)[^&]*&gt;/i.test(str)) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(str, 'text/html');
+        const decoded = doc.body.textContent || "";
+        if (/<[a-z][\s\S]*>/i.test(decoded)) {
+          return decoded;
+        }
+      } catch {}
+      return str
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+    }
+    return str;
+  }
+
+  function getEditorHtml() {
+    let content = '';
+    if (currentEditorMode === 'html') {
+      const codeInput = document.getElementById('htmlCodeInput');
+      content = codeInput ? codeInput.value : '';
+    } else if (quill) {
+      content = quill.root.innerHTML;
+      content = decodeHtmlIfNeeded(content);
+    }
+    return content;
+  }
+
+  function setEditorHtml(html) {
+    if (quill) {
+      quill.root.innerHTML = html;
+    }
+    const codeInput = document.getElementById('htmlCodeInput');
+    if (codeInput) {
+      codeInput.value = html;
+    }
+    updatePreview();
+  }
+
+  function switchEditorMode(mode) {
+    currentEditorMode = mode;
+    const visualBtn = document.getElementById('tabEditorVisualBtn');
+    const htmlBtn = document.getElementById('tabEditorHtmlBtn');
+    const visualWrapper = document.getElementById('visualEditorWrapper');
+    const htmlWrapper = document.getElementById('htmlEditorWrapper');
+    const codeInput = document.getElementById('htmlCodeInput');
+
+    if (mode === 'html') {
+      visualBtn.className = 'tab-btn';
+      htmlBtn.className = 'tab-btn active';
+      let currentContent = quill ? quill.root.innerHTML : '';
+      currentContent = decodeHtmlIfNeeded(currentContent);
+      if (codeInput) codeInput.value = currentContent;
+      visualWrapper.style.display = 'none';
+      htmlWrapper.style.display = 'block';
+    } else {
+      visualBtn.className = 'tab-btn active';
+      htmlBtn.className = 'tab-btn';
+      const codeContent = codeInput ? codeInput.value : '';
+      if (quill) {
+        quill.root.innerHTML = codeContent;
+      }
+      visualWrapper.style.display = 'block';
+      htmlWrapper.style.display = 'none';
+    }
+    updatePreview();
+  }
+
+  function onHtmlCodeInput() {
+    updatePreview();
+  }
+
+  function formatHtmlCode() {
+    const input = document.getElementById('htmlCodeInput');
+    if (!input || !input.value.trim()) return;
+    let text = input.value.trim();
+    let formatted = '';
+    let pad = 0;
+    text = text.replace(/>\s*</g, '><');
+    const tokens = text.split(/(<[^>]+>)/g).filter(Boolean);
+    tokens.forEach(tok => {
+      if (/^<\/[a-zA-Z0-9]+>/.test(tok)) {
+        pad = Math.max(0, pad - 1);
+        formatted += '  '.repeat(pad) + tok + '\n';
+      } else if (/^<[a-zA-Z0-9]+[^>]*\/>/.test(tok) || /^<!/.test(tok)) {
+        formatted += '  '.repeat(pad) + tok + '\n';
+      } else if (/^<[a-zA-Z0-9]+[^>]*>/.test(tok)) {
+        formatted += '  '.repeat(pad) + tok + '\n';
+        if (!/^(<(br|hr|img|input|meta|link)[^>]*>)/i.test(tok)) {
+          pad++;
+        }
+      } else {
+        const t = tok.trim();
+        if (t) formatted += '  '.repeat(pad) + t + '\n';
+      }
+    });
+    input.value = formatted.trim();
+    onHtmlCodeInput();
+  }
+
+  function insertEditorTag(tag) {
+    if (currentEditorMode === 'html') {
+      const input = document.getElementById('htmlCodeInput');
+      if (input) {
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+        input.value = input.value.substring(0, start) + tag + input.value.substring(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start + tag.length;
+        onHtmlCodeInput();
+      }
+    } else if (quill) {
+      const range = quill.getSelection(true);
+      quill.insertText(range.index, tag, 'user');
+      quill.setSelection(range.index + tag.length, 'user');
+      updatePreview();
+    }
+  }
+
+  function insertSubjectTag(tag) {
+    const input = document.getElementById('campaignSubjectInput');
+    const start = input.selectionStart || input.value.length;
+    const end = input.selectionEnd || input.value.length;
+    input.value = input.value.substring(0, start) + tag + input.value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + tag.length;
+    updatePreview();
+  }
+
+  function insertHtmlSnippet(type) {
+    let snippet = '';
+    if (type === 'button') {
+      snippet = `\n<table cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0;">
+  <tr>
+    <td align="center" bgcolor="#2563eb" style="border-radius: 6px;">
+      <a href="https://example.com" target="_blank" style="display: inline-block; padding: 12px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px;">
+        Explore Opportunity →
+      </a>
+    </td>
+  </tr>
+</table>\n`;
+    } else if (type === 'table') {
+      snippet = `\n<table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px;">
+  <thead>
+    <tr style="background-color: #f1f5f9; text-align: left;">
+      <th style="padding: 10px 14px; border: 1px solid #cbd5e1; font-weight: 600;">Recipient Company</th>
+      <th style="padding: 10px 14px; border: 1px solid #cbd5e1; font-weight: 600;">Status</th>
+      <th style="padding: 10px 14px; border: 1px solid #cbd5e1; font-weight: 600;">Priority</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px 14px; border: 1px solid #cbd5e1;">{{company}}</td>
+      <td style="padding: 10px 14px; border: 1px solid #cbd5e1; color: #16a34a; font-weight: 600;">Active Partner</td>
+      <td style="padding: 10px 14px; border: 1px solid #cbd5e1;">High</td>
+    </tr>
+  </tbody>
+</table>\n`;
+    } else if (type === 'card') {
+      snippet = `\n<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 16px; margin: 16px 0;">
+  <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 16px;">Notice for {{name}} at {{company}}</h4>
+  <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.5;">
+    We have customized this update specifically for your requirements.
+  </p>
+</div>\n`;
+    }
+
+    if (currentEditorMode === 'html') {
+      const input = document.getElementById('htmlCodeInput');
+      const start = input.selectionStart || input.value.length;
+      const end = input.selectionEnd || input.value.length;
+      input.value = input.value.substring(0, start) + snippet + input.value.substring(end);
+      input.selectionStart = input.selectionEnd = start + snippet.length;
+      input.focus();
+      onHtmlCodeInput();
+    } else {
+      switchEditorMode('html');
+      const input = document.getElementById('htmlCodeInput');
+      input.value = input.value + snippet;
+      onHtmlCodeInput();
+    }
+  }
+
+  function loadHtmlTemplate() {
+    const template = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Exclusive Opportunity</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="max-width:600px; margin:24px auto; background-color:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.06); border:1px solid #e2e8f0;">
+    <!-- Header Banner -->
+    <div style="background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding:32px 24px; text-align:center; color:#ffffff;">
+      <h1 style="margin:0 0 8px 0; font-size:24px; font-weight:700;">Executive Briefing</h1>
+      <p style="margin:0; font-size:15px; opacity:0.9;">Prepared exclusively for {{name}} at {{company}}</p>
+    </div>
+    
+    <!-- Content Body -->
+    <div style="padding:28px 24px;">
+      <p style="font-size:16px; color:#1e293b; margin-top:0;">Dear <strong>{{name}}</strong>,</p>
+      
+      <p style="font-size:15px; color:#475569; line-height:1.6;">
+        We have been closely following <strong>{{company}}</strong>'s recent milestones and wanted to reach out regarding our automated email delivery &amp; real-time engagement platform.
+      </p>
+
+      <!-- Highlight Card -->
+      <div style="background-color:#f8fafc; border-left:4px solid #3b82f6; border-radius:6px; padding:16px; margin:20px 0;">
+        <h4 style="margin:0 0 8px 0; color:#1e293b; font-size:15px;">Why teams choose us:</h4>
+        <ul style="margin:0; padding-left:20px; color:#475569; font-size:14px; line-height:1.6;">
+          <li>Automated 1-to-1 inbox delivery via secure Gmail SMTP</li>
+          <li>Transparent pixel open tracking &amp; webhook reporting</li>
+          <li>Full HTML &amp; inline CSS support for responsive rendering</li>
+        </ul>
+      </div>
+
+      <!-- Action Button -->
+      <table cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+        <tr>
+          <td align="center" bgcolor="#2563eb" style="border-radius:6px;">
+            <a href="https://example.com/demo" target="_blank" style="display:inline-block; padding:12px 28px; font-size:15px; color:#ffffff; text-decoration:none; font-weight:600; border-radius:6px;">
+              Schedule a 10-Minute Walkthrough →
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size:14px; color:#64748b; line-height:1.5; margin-bottom:0;">
+        Best regards,<br>
+        <strong style="color:#1e293b;">The Growth Team</strong>
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color:#f8fafc; border-top:1px solid #e2e8f0; padding:16px 24px; text-align:center; font-size:12px; color:#94a3b8;">
+      Delivered directly to {{email}} | You are receiving this because of your affiliation with {{company}}.
+    </div>
+  </div>
+</body>
+</html>`;
+    setEditorHtml(template);
+    switchEditorMode('html');
+    showAlert("🎨 Responsive HTML email template loaded! Check the live preview below.", false);
+  }
+
+  function showAlert(msg, isError = true) {
+    const el = document.getElementById('globalAlert');
+    el.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+    el.innerText = msg;
+    el.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
+  let currentProvider = 'gmail';
+
+  async function checkHealth() {
+    await fetchProviderStatus();
+  }
+
+  async function fetchProviderStatus() {
+    try {
+      const res = await fetch('/api/provider');
+      const data = await res.json();
+      currentProvider = data.active || 'gmail';
+      updateProviderUI(data);
+    } catch {
+      const badge = document.getElementById('providerQuickBadge');
+      if (badge) badge.innerText = 'Offline';
+    }
+  }
+
+  function updateProviderUI(data) {
+    const active = data.active || currentProvider;
+    currentProvider = active;
+
+    // 1. Update header pills
+    const pillGmail = document.getElementById('btnPillGmail');
+    const pillSes = document.getElementById('btnPillSes');
+    const pillMock = document.getElementById('btnPillMock');
+    if (pillGmail) pillGmail.className = 'provider-pill-btn' + (active === 'gmail' ? ' active' : '');
+    if (pillSes) pillSes.className = 'provider-pill-btn' + (active === 'ses' ? ' active' : '');
+    if (pillMock) pillMock.className = 'provider-pill-btn' + (active === 'mock' ? ' active' : '');
+
+    // 2. Update header badge text
+    const badge = document.getElementById('providerQuickBadge');
+    if (badge) {
+      if (active === 'ses') badge.innerText = 'Amazon SES';
+      else if (active === 'gmail') badge.innerText = 'Gmail SMTP';
+      else badge.innerText = 'Mock Sim';
+    }
+
+    // 3. Update test modal badge
+    const testBadge = document.getElementById('testModalProviderLabel');
+    if (testBadge) {
+      testBadge.innerText = active === 'ses' ? 'Amazon SES' : (active === 'gmail' ? 'Gmail SMTP' : 'Mock');
+    }
+
+    // 4. Update modal cards if modal elements exist
+    const cardGmail = document.getElementById('cardProviderGmail');
+    const cardSes = document.getElementById('cardProviderSes');
+    const badgeGmail = document.getElementById('badgeStatusGmail');
+    const badgeSes = document.getElementById('badgeStatusSes');
+    const btnActGmail = document.getElementById('btnActivateGmail');
+    const btnActSes = document.getElementById('btnActivateSes');
+
+    if (data.providers) {
+      if (cardGmail && badgeGmail && btnActGmail) {
+        if (active === 'gmail') {
+          cardGmail.style.borderColor = '#3b82f6';
+          cardGmail.style.boxShadow = '0 0 0 1px #3b82f6';
+          badgeGmail.innerText = 'Active';
+          badgeGmail.style.background = '#dcfce7';
+          badgeGmail.style.color = '#15803d';
+          btnActGmail.className = 'btn btn-primary btn-sm';
+          btnActGmail.innerText = '✓ Active Provider';
+        } else {
+          cardGmail.style.borderColor = 'var(--border)';
+          cardGmail.style.boxShadow = 'none';
+          badgeGmail.innerText = data.providers.gmail?.configured ? 'Configured' : 'Missing Config';
+          badgeGmail.style.background = '#f1f5f9';
+          badgeGmail.style.color = '#475569';
+          btnActGmail.className = 'btn btn-outline btn-sm';
+          btnActGmail.innerText = 'Use Gmail SMTP';
+        }
+        if (data.providers.gmail?.user) {
+          const userEl = document.getElementById('gmailUserText');
+          if (userEl) userEl.innerText = data.providers.gmail.user;
+        }
+      }
+
+      if (cardSes && badgeSes && btnActSes) {
+        if (active === 'ses') {
+          cardSes.style.borderColor = '#d97706';
+          cardSes.style.boxShadow = '0 0 0 1px #d97706';
+          badgeSes.innerText = 'Active';
+          badgeSes.style.background = '#fef3c7';
+          badgeSes.style.color = '#b45309';
+          btnActSes.className = 'btn btn-primary btn-sm';
+          btnActSes.style.background = '#d97706';
+          btnActSes.style.borderColor = '#d97706';
+          btnActSes.innerText = '✓ Active Provider';
+        } else {
+          cardSes.style.borderColor = 'var(--border)';
+          cardSes.style.boxShadow = 'none';
+          badgeSes.innerText = data.providers.ses?.configured ? `Ready (${data.providers.ses.mode.toUpperCase()})` : 'Unconfigured';
+          badgeSes.style.background = '#f1f5f9';
+          badgeSes.style.color = '#475569';
+          btnActSes.className = 'btn btn-outline btn-sm';
+          btnActSes.style.color = '#d97706';
+          btnActSes.style.borderColor = '#d97706';
+          btnActSes.style.background = 'transparent';
+          btnActSes.innerText = '⚡ Switch to Amazon SES';
+        }
+        const modeEl = document.getElementById('sesModeText');
+        const regionEl = document.getElementById('sesRegionText');
+        if (modeEl) modeEl.innerText = data.providers.ses?.mode ? data.providers.ses.mode.toUpperCase() : 'AWS SDK / SMTP';
+        if (regionEl) regionEl.innerText = data.providers.ses?.region || 'us-east-1';
+      }
+    }
+  }
+
+  async function switchActiveProvider(provider) {
+    try {
+      const res = await fetch('/api/provider/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        currentProvider = data.active;
+        updateProviderUI(data.status);
+        const name = data.active === 'ses' ? 'Amazon SES' : (data.active === 'gmail' ? 'Gmail SMTP' : 'Mock');
+        showAlert(`⚡ Switched active delivery provider to ${name}!`, false);
+      } else {
+        showAlert(data.error || 'Failed to switch provider');
+      }
+    } catch (e) {
+      showAlert('Error switching provider: ' + e.message);
+    }
+  }
+
+  function openProviderModal() {
+    const modal = document.getElementById('providerConfigModal');
+    if (modal) modal.style.display = 'flex';
+    fetchProviderStatus();
+  }
+
+  function closeProviderModal() {
+    const modal = document.getElementById('providerConfigModal');
+    if (modal) modal.style.display = 'none';
+    const resultBox = document.getElementById('providerVerifyResult');
+    if (resultBox) resultBox.style.display = 'none';
+  }
+
+  async function verifyProviderConnection(provider) {
+    const resultBox = document.getElementById('providerVerifyResult');
+    if (resultBox) {
+      resultBox.style.display = 'block';
+      resultBox.style.background = '#eff6ff';
+      resultBox.style.border = '1px solid #bfdbfe';
+      resultBox.style.color = '#1e40af';
+      resultBox.innerHTML = `⏳ Testing connection to <strong>${provider.toUpperCase()}</strong>...`;
+    }
+
+    try {
+      const res = await fetch('/api/provider/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        resultBox.style.background = '#f0fdf4';
+        resultBox.style.border = '1px solid #bbf7d0';
+        resultBox.style.color = '#15803d';
+        let detailInfo = '';
+        if (data.details) {
+          if (data.details.maxSendRate) {
+            detailInfo = ` (Quota: 24h: ${data.details.sentLast24Hours || 0}/${data.details.max24HourSend || 0}, Max Rate: ${data.details.maxSendRate}/sec)`;
+          } else if (data.details.host) {
+            detailInfo = ` (Connected to ${data.details.host}:${data.details.port})`;
+          }
+        }
+        resultBox.innerHTML = `✓ <strong>${provider.toUpperCase()} Verified!</strong> Connection handshake successful${detailInfo}. Ready for live delivery.`;
+      } else {
+        resultBox.style.background = '#fef2f2';
+        resultBox.style.border = '1px solid #fecaca';
+        resultBox.style.color = '#991b1b';
+        resultBox.innerHTML = `✗ <strong>Verification Failed:</strong> ${data.error || 'Connection error'}`;
+      }
+    } catch (e) {
+      if (resultBox) {
+        resultBox.style.background = '#fef2f2';
+        resultBox.style.border = '1px solid #fecaca';
+        resultBox.style.color = '#991b1b';
+        resultBox.innerHTML = `✗ <strong>Error:</strong> ${e.message}`;
+      }
+    }
+  }
+
+  function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    const btn = document.getElementById('liveToggle');
+    const txt = document.getElementById('liveText');
+    if (autoRefreshEnabled) {
+      btn.className = 'live-indicator active';
+      txt.innerText = 'Live (2s)';
+      if (currentCampaignId && !pollInterval) {
+        pollInterval = setInterval(refreshCampaignKPIs, 2000);
+      }
+    } else {
+      btn.className = 'live-indicator';
+      txt.innerText = 'Paused';
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+  }
+
+  function switchRecipientTab(tab) {
+    document.getElementById('tabFileBtn').className = 'tab-btn ' + (tab === 'file' ? 'active' : '');
+    document.getElementById('tabManualBtn').className = 'tab-btn ' + (tab === 'manual' ? 'active' : '');
+    document.getElementById('tabFileContent').style.display = (tab === 'file' ? 'block' : 'none');
+    document.getElementById('tabManualContent').style.display = (tab === 'manual' ? 'block' : 'none');
+  }
+
+  function setupDropzone() {
+    const dz = document.getElementById('dropzoneArea');
+    ['dragenter', 'dragover'].forEach(name => {
+      dz.addEventListener(name, (e) => { e.preventDefault(); dz.classList.add('dragover'); }, false);
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dz.addEventListener(name, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }, false);
+    });
+    dz.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        document.getElementById('recipientFile').files = files;
+        autoImportFile();
+      }
+    });
+  }
+
+  async function autoImportFile() {
+    const file = document.getElementById('recipientFile').files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/import', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || 'Failed to import file');
+        return;
+      }
+      validatedRecipients = data.recipients || [];
+      showValidationStats(data.total, data.valid, data.invalid, data.duplicates);
+      showAlert(`✓ File imported: ${data.valid} valid recipients loaded.`, false);
+      updatePreview();
+    } catch (err) {
+      showAlert('Error uploading recipient file: ' + err.message);
+    }
+  }
+
+  function parseManualRecipients() {
+    const raw = document.getElementById('manualRecipients').value.trim();
+    if (!raw) {
+      validatedRecipients = [];
+      document.getElementById('validationStatus').style.display = 'none';
+      updatePreview();
+      return;
+    }
+    const lines = raw.split('\n');
+    const seen = new Set();
+    const valid = [];
+    let invalidCount = 0;
+    let duplicateCount = 0;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    for (const line of lines) {
+      const parts = line.split(/[,\t]+/).map(p => p.trim());
+      const email = (parts[0] || '').toLowerCase();
+      const name = parts[1] || '';
+      const company = parts[2] || '';
+
+      if (!email || !emailRegex.test(email)) invalidCount++;
+      else if (seen.has(email)) duplicateCount++;
+      else {
+        seen.add(email);
+        valid.push({ email, name, company });
+      }
+    }
+    validatedRecipients = valid;
+    showValidationStats(lines.length, valid.length, invalidCount, duplicateCount);
+    updatePreview();
+  }
+
+  function showValidationStats(total, valid, invalid, duplicates) {
+    document.getElementById('validationStatus').style.display = 'block';
+    document.getElementById('chipTotal').innerText = `Total: ${total}`;
+    document.getElementById('chipValid').innerText = `✓ Valid: ${valid}`;
+    document.getElementById('chipInvalid').innerText = `✗ Invalid: ${invalid}`;
+    document.getElementById('chipDuplicate').innerText = `⚠ Duplicates: ${duplicates}`;
+  }
+
+  // Attachments Handling
+  async function handleAttachmentUpload(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload-attachment', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          uploadedAttachments.push(data);
+          showAlert(`✓ Attachment added: ${data.filename}`, false);
+        } else {
+          showAlert(data.error || 'Failed to upload attachment');
+        }
+      } catch (e) {
+        showAlert('Attachment upload failed: ' + e.message);
+      }
+    }
+    input.value = '';
+    renderAttachmentList();
+  }
+
+  function renderAttachmentList() {
+    const listEl = document.getElementById('attachmentList');
+    if (uploadedAttachments.length === 0) {
+      listEl.innerHTML = '<span id="noAttachmentsText" style="font-size:12px; color:var(--text-muted);">No attachments added yet.</span>';
+      return;
+    }
+
+    listEl.innerHTML = uploadedAttachments.map((att, idx) => {
+      const kb = Math.round((att.size || 0) / 1024);
+      return `
+        <div class="attachment-chip">
+          <span>📎</span>
+          <strong>${escapeHtml(att.filename)}</strong>
+          <span style="color:var(--text-muted); font-size:11px;">(${kb} KB)</span>
+          <button type="button" class="remove-att-btn" onclick="removeAttachment(${idx})">×</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function removeAttachment(index) {
+    uploadedAttachments.splice(index, 1);
+    renderAttachmentList();
+  }
+
+  // Preview
+  function switchPreviewMode(mode) {
+    currentPreviewMode = mode;
+    const btnRendered = document.getElementById('btnPreviewRendered');
+    const btnSource = document.getElementById('btnPreviewSource');
+    const bodyText = document.getElementById('previewBodyText');
+    const bodySource = document.getElementById('previewBodySource');
+    if (btnRendered) btnRendered.className = 'tab-btn ' + (mode === 'rendered' ? 'active' : '');
+    if (btnSource) btnSource.className = 'tab-btn ' + (mode === 'source' ? 'active' : '');
+    if (bodyText) bodyText.style.display = (mode === 'rendered' ? 'block' : 'none');
+    if (bodySource) bodySource.style.display = (mode === 'source' ? 'block' : 'none');
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const subject = document.getElementById('campaignSubjectInput') ? document.getElementById('campaignSubjectInput').value : '';
+    const bodyHtml = getEditorHtml();
+    const sample = validatedRecipients[0] || { name: 'Alex Johnson', company: 'Acme Technologies', email: 'alex@example.com' };
+
+    const interpolate = (txt, data) => {
+      return (txt || '').replace(/\{\{\s*name\s*\}\}/gi, data.name || '(name)')
+                        .replace(/\{\{\s*company\s*\}\}/gi, data.company || '(company)')
+                        .replace(/\{\{\s*email\s*\}\}/gi, data.email || '(email)');
+    };
+
+    const interpolatedSubject = interpolate(subject, sample);
+    const interpolatedBody = interpolate(bodyHtml, sample);
+
+    const subjectEl = document.getElementById('previewSubjectText');
+    if (subjectEl) subjectEl.innerText = interpolatedSubject || '(No subject entered)';
+
+    const bodyEl = document.getElementById('previewBodyText');
+    if (bodyEl) {
+      if (interpolatedBody && interpolatedBody.trim() && interpolatedBody.trim() !== '<p><br></p>') {
+        bodyEl.innerHTML = interpolatedBody;
+      } else {
+        bodyEl.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">(No body entered)</span>';
+      }
+    }
+
+    const sourceEl = document.getElementById('previewBodySource');
+    if (sourceEl) {
+      sourceEl.textContent = interpolatedBody || '(No content)';
+    }
+
+    const noteEl = document.getElementById('previewRecipientNote');
+    if (noteEl) {
+      noteEl.innerText = validatedRecipients.length > 0
+        ? `${sample.email} (${sample.name || 'Recipient'})`
+        : 'Sample Data (Upload list for live preview)';
+    }
+  }
+
+  function togglePreviewTab(show) {
+    document.getElementById('btnTabPreview').className = 'tab-btn ' + (show ? 'active' : '');
+    document.getElementById('btnTabHidePreview').className = 'tab-btn ' + (!show ? 'active' : '');
+    document.getElementById('previewContainer').style.display = show ? 'block' : 'none';
+  }
+
+  function loadDemoData() {
+    switchRecipientTab('manual');
+    document.getElementById('manualRecipients').value = 
+      "arpitshrivas377@gmail.com, Arpit Shrivas, Self\n" +
+      "partner@example.com, Sarah Miller, Innovate Corp\n" +
+      "contact@example.com, David Chen, Future Labs";
+    parseManualRecipients();
+
+    document.getElementById('campaignNameInput').value = "Executive Newsletter & Product Update";
+    document.getElementById('campaignSubjectInput').value = "Exclusive opportunity for {{name}} at {{company}}";
+    
+    setEditorHtml(`
+      <p>Hi <strong>{{name}}</strong>,</p>
+      <p><br></p>
+      <p>We are reaching out to leaders at <span style="color: rgb(37, 99, 235);"><strong>{{company}}</strong></span> with an exclusive preview of our automated delivery engine.</p>
+      <p><br></p>
+      <p>Key Highlights:</p>
+      <ul>
+        <li>Real-time inbox delivery via Gmail SMTP</li>
+        <li>Automated open tracking pixel</li>
+        <li>Rich text styling with personalized variables</li>
+      </ul>
+      <p><br></p>
+      <p>Best regards,<br><strong>The Growth Team</strong></p>
+    `);
+    showAlert("Sample demo data loaded! You can preview and start the campaign.", false);
+  }
+
+  function fillSampleCampaignText() {
+    document.getElementById('campaignSubjectInput').value = "Exciting partnership inquiry for {{name}} at {{company}}";
+    setEditorHtml(`
+      <p>Hi {{name}},</p>
+      <p><br></p>
+      <p>I noticed your recent developments at <strong>{{company}}</strong> and wanted to connect directly.</p>
+      <p>We are helping teams automate outreach with 100% verified inbox delivery.</p>
+      <p><br></p>
+      <p>Would you have 10 minutes this week for a brief conversation?</p>
+      <p><br></p>
+      <p>Warm regards,<br><strong>Arpit Shrivas</strong></p>
+    `);
+  }
+
+  // Test Modal
+  function openTestEmailModal() {
+    document.getElementById('testEmailModal').style.display = 'flex';
+  }
+  function closeTestEmailModal() {
+    document.getElementById('testEmailModal').style.display = 'none';
+  }
+
+  function sendTestDraft() {
+    openTestEmailModal();
+  }
+
+  async function executeTestSend() {
+    const to = document.getElementById('testEmailTarget').value.trim();
+    if (!to) {
+      alert('Please enter a recipient email.');
+      return;
+    }
+    const btn = document.getElementById('testSendConfirmBtn');
+    btn.disabled = true;
+    btn.innerText = 'Sending...';
+
+    const subject = document.getElementById('campaignSubjectInput').value || 'Test Email from Bulk Email Agent';
+    const bodyHtml = getEditorHtml() || '<p>This is a test email.</p>';
+
+    try {
+      const res = await fetch('/api/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          subject: '[TEST] ' + subject,
+          body: bodyHtml,
+          attachments: uploadedAttachments
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.accepted) {
+        showAlert(`✓ Test email delivered to ${to}! Check your inbox.`, false);
+        closeTestEmailModal();
+      } else {
+        showAlert('Delivery failed: ' + (data.error || 'Server rejected send'));
+      }
+    } catch (e) {
+      showAlert('Error sending test email: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Send Test Now';
+    }
+  }
+
+  // Create and Start Campaign
+  async function createAndStartCampaign() {
+    const name = document.getElementById('campaignNameInput').value.trim();
+    const subject = document.getElementById('campaignSubjectInput').value.trim();
+    const bodyHtml = getEditorHtml().trim();
+
+    if (!name) { showAlert('Please enter a Campaign Name.'); return; }
+    if (!subject) { showAlert('Please enter an Email Subject.'); return; }
+    if (!bodyHtml || bodyHtml === '<p><br></p>') { showAlert('Please enter an Email Body.'); return; }
+    if (!validatedRecipients || validatedRecipients.length === 0) {
+      showAlert('No valid recipients found. Please upload a file or paste recipients in Step 1.');
+      return;
+    }
+
+    if (!confirm(`Launch campaign "${name}" to ${validatedRecipients.length} recipients?\nAttachments: ${uploadedAttachments.length} file(s).`)) {
+      return;
+    }
+
+    const startBtn = document.getElementById('startBtn');
+    startBtn.disabled = true;
+    startBtn.innerText = 'Launching Campaign...';
+
+    try {
+      // 1. Create Campaign
+      const createRes = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, subject, body: bodyHtml,
+          recipients: validatedRecipients,
+          attachments: uploadedAttachments
+        })
+      });
+
+      const createData = await createRes.json();
+      if (!createRes.ok) {
+        showAlert(createData.error || 'Failed to create campaign');
+        startBtn.disabled = false;
+        startBtn.innerText = '🚀 START CAMPAIGN';
+        return;
+      }
+
+      currentCampaignId = createData.campaignId;
+
+      // 2. Start Campaign
+      const startRes = await fetch(`/api/campaigns/${currentCampaignId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const startData = await startRes.json();
+      if (!startRes.ok) {
+        showAlert(startData.error || 'Failed to start campaign');
+        startBtn.disabled = false;
+        startBtn.innerText = '🚀 START CAMPAIGN';
+        return;
+      }
+
+      showAlert(`🚀 Campaign "${name}" launched! Live progress is streaming below.`, false);
+      startBtn.disabled = false;
+      startBtn.innerText = '🚀 START CAMPAIGN';
+
+      await loadCampaignsList();
+      selectCampaign(currentCampaignId);
+    } catch (err) {
+      showAlert('Error launching campaign: ' + err.message);
+      startBtn.disabled = false;
+      startBtn.innerText = '🚀 START CAMPAIGN';
+    }
+  }
+
+  // Load Campaigns
+  async function loadCampaignsList() {
+    try {
+      const res = await fetch('/api/campaigns');
+      const campaigns = await res.json();
+      const selector = document.getElementById('campaignSelector');
+      selector.innerHTML = '<option value="">Select a Campaign...</option>';
+
+      for (const c of campaigns) {
+        const opt = document.createElement('option');
+        opt.value = c.campaign_id;
+        const timeStr = new Date(c.created_at).toLocaleTimeString();
+        opt.innerText = `${c.campaign_name} (${timeStr}) - ${c.total_recipients} emails`;
+        selector.appendChild(opt);
+      }
+
+      if (currentCampaignId) {
+        selector.value = currentCampaignId;
+      } else if (campaigns.length > 0) {
+        selector.value = campaigns[0].campaign_id;
+        selectCampaign(campaigns[0].campaign_id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function onSelectCampaign(id) {
+    if (!id) return;
+    selectCampaign(id);
+  }
+
+  function selectCampaign(id) {
+    currentCampaignId = id;
+    document.getElementById('campaignSelector').value = id;
+
+    document.getElementById('csvLink').href = `/api/campaigns/${id}/report.csv`;
+    document.getElementById('csvLink').style.pointerEvents = 'auto';
+    document.getElementById('csvLink').style.opacity = '1';
+
+    document.getElementById('xlsxLink').href = `/api/campaigns/${id}/report.xlsx`;
+    document.getElementById('xlsxLink').style.pointerEvents = 'auto';
+    document.getElementById('xlsxLink').style.opacity = '1';
+
+    refreshCampaignKPIs();
+
+    if (pollInterval) clearInterval(pollInterval);
+    if (autoRefreshEnabled) {
+      pollInterval = setInterval(refreshCampaignKPIs, 2000);
+    }
+  }
+
+  async function refreshCampaignKPIs() {
+    if (!currentCampaignId) return;
+
+    try {
+      const [campRes, recRes] = await Promise.all([
+        fetch(`/api/campaigns/${currentCampaignId}`),
+        fetch(`/api/campaigns/${currentCampaignId}/recipients`)
+      ]);
+
+      if (!campRes.ok) return;
+      const c = await campRes.json();
+      const recipients = await recRes.json();
+      allRecipientsData = recipients || [];
+
+      // Meta
+      document.getElementById('campaignMeta').style.display = 'block';
+      document.getElementById('activeCampaignName').innerText = c.campaign_name;
+      document.getElementById('activeCampaignStarted').innerText = c.started_at ? new Date(c.started_at).toLocaleTimeString() : 'Not started';
+
+      const isCompleted = !!c.completed_at;
+      const statusEl = document.getElementById('activeCampaignStatus');
+      statusEl.innerText = isCompleted ? 'Completed' : (c.started_at ? 'Sending / In Progress' : 'Draft');
+      statusEl.style.color = isCompleted ? 'var(--success)' : (c.started_at ? 'var(--primary)' : 'var(--text-muted)');
+
+      // KPIs
+      const total = c.total_recipients || 0;
+      const valid = c.valid_recipients || 0;
+      const sent = c.sent_count || 0;
+      const delivered = c.delivered_count || 0;
+      const opened = c.opened_count || 0;
+      const clicked = c.clicked_count || 0;
+      const failed = (c.failed_count || 0) + (c.bounced_count || 0) + (c.rejected_count || 0);
+
+      document.getElementById('kpi_total').innerText = total;
+      document.getElementById('kpi_valid_sub').innerText = `${valid} Valid`;
+      document.getElementById('kpi_sent').innerText = sent;
+      document.getElementById('kpi_delivered').innerText = delivered;
+      document.getElementById('kpi_opened').innerText = opened;
+      document.getElementById('kpi_clicked').innerText = clicked;
+      document.getElementById('kpi_failed').innerText = failed;
+
+      // Rate percentages
+      const sentPct = valid > 0 ? Math.round((sent / valid) * 100) : 0;
+      const delivPct = sent > 0 ? Math.round((delivered / sent) * 100) : 0;
+      const openPct = delivered > 0 ? Math.round((opened / delivered) * 100) : 0;
+      const clickPct = opened > 0 ? Math.round((clicked / opened) * 100) : 0;
+
+      document.getElementById('kpi_sent_pct').innerText = `${sentPct}% Sent`;
+      document.getElementById('kpi_deliv_pct').innerText = `${delivPct}% Delivery Rate`;
+      document.getElementById('kpi_open_pct').innerText = `${openPct}% Open Rate`;
+      document.getElementById('kpi_click_pct').innerText = `${clickPct}% Click Rate`;
+
+      // Multi Progress Bar
+      const base = Math.max(valid, 1);
+      document.getElementById('barOpened').style.width = `${Math.min(100, Math.round((opened / base) * 100))}%`;
+      document.getElementById('barDelivered').style.width = `${Math.min(100, Math.round(((delivered - opened) / base) * 100))}%`;
+      document.getElementById('barSent').style.width = `${Math.min(100, Math.round(((sent - delivered) / base) * 100))}%`;
+      document.getElementById('barFailed').style.width = `${Math.min(100, Math.round((failed / base) * 100))}%`;
+
+      updateFilterCounts();
+      renderFilteredRecipients();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function updateFilterCounts() {
+    let counts = { ALL: allRecipientsData.length, DELIVERED: 0, OPENED: 0, SENT: 0, PENDING: 0, FAILED: 0 };
+    for (const r of allRecipientsData) {
+      if (counts[r.status] !== undefined) counts[r.status]++;
+      if (['FAILED', 'BOUNCED', 'REJECTED'].includes(r.status)) counts.FAILED++;
+    }
+    document.getElementById('count_all').innerText = counts.ALL;
+    document.getElementById('count_delivered').innerText = counts.DELIVERED;
+    document.getElementById('count_opened').innerText = counts.OPENED;
+    document.getElementById('count_sent').innerText = counts.SENT;
+    document.getElementById('count_pending').innerText = counts.PENDING;
+    document.getElementById('count_failed').innerText = counts.FAILED;
+  }
+
+  function setFilter(filter, el) {
+    currentFilter = filter;
+    currentPage = 1;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderFilteredRecipients();
+  }
+
+  function onSearchChange() {
+    searchQuery = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+    currentPage = 1;
+    renderFilteredRecipients();
+  }
+
+  function renderFilteredRecipients() {
+    const filtered = allRecipientsData.filter(r => {
+      // Filter status
+      if (currentFilter !== 'ALL') {
+        if (currentFilter === 'FAILED' && !['FAILED', 'BOUNCED', 'REJECTED'].includes(r.status)) return false;
+        else if (currentFilter !== 'FAILED' && r.status !== currentFilter) return false;
+      }
+      // Search
+      if (searchQuery) {
+        const text = `${r.email} ${r.name || ''} ${r.company || ''} ${r.status}`.toLowerCase();
+        if (!text.includes(searchQuery)) return false;
+      }
+      return true;
+    });
+
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const pageItems = filtered.slice(startIdx, endIdx);
+
+    const tbody = document.getElementById('recipientRows');
+    const paginationBar = document.getElementById('paginationBar');
+
+    if (totalItems === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:32px;">No recipients found matching current filter.</td></tr>';
+      paginationBar.style.display = 'none';
+      return;
+    }
+
+    paginationBar.style.display = 'flex';
+    document.getElementById('paginationInfo').innerText = `Showing ${startIdx + 1}–${endIdx} of ${totalItems} recipients`;
+    document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevPageBtn').disabled = (currentPage <= 1);
+    document.getElementById('nextPageBtn').disabled = (currentPage >= totalPages);
+
+    const formatTime = (t) => t ? new Date(t).toLocaleTimeString() : '-';
+
+    tbody.innerHTML = pageItems.map(r => {
+      // Test Open action button
+      const openBtn = (r.status === 'DELIVERED' || r.status === 'SENT')
+        ? `<button class="btn btn-outline btn-sm" onclick="triggerTestOpen(${r.recipient_id}, '${escapeHtml(r.email)}')" style="padding:3px 8px; font-size:11px;">🔔 Test Open</button>`
+        : (r.status === 'OPENED' ? `<span style="color:var(--purple); font-weight:700;">✓ Opened</span>` : '-');
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(r.email)}</strong></td>
+          <td>${escapeHtml(r.name || '-')}</td>
+          <td>${escapeHtml(r.company || '-')}</td>
+          <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+          <td>${formatTime(r.sent_at)}</td>
+          <td>${formatTime(r.delivered_at)}</td>
+          <td>${formatTime(r.opened_at)}</td>
+          <td>${openBtn}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function changePage(delta) {
+    currentPage += delta;
+    renderFilteredRecipients();
+  }
+
+  // Trigger simulated open for quick testing
+  async function triggerTestOpen(recipientId, email) {
+    if (!currentCampaignId) return;
+    try {
+      const res = await fetch(`/api/campaigns/${currentCampaignId}/recipients/${recipientId}/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert(`✓ Open event recorded for ${email}! Status updated to OPENED.`, false);
+        await refreshCampaignKPIs();
+      } else {
+        showAlert('Failed to record open: ' + (data.error || 'Server error'));
+      }
+    } catch (e) {
+      showAlert('Failed to trigger open: ' + e.message);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+</body>
+</html>

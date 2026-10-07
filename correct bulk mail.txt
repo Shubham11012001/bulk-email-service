@@ -1,0 +1,10 @@
+PORT=3000
+DATABASE_PATH=./data/email-agent.db
+EMAIL_PROVIDER=mock
+EMAIL_FROM=arpitshrivas377@gmail.com
+EMAIL_FROM_NAME=Test mail
+MAX_EMAILS_PER_MINUTE=60
+BATCH_SIZE=10
+WORKER_INTERVAL_MS=1000
+# Real provider integration can be added through the EmailProvider interface.
+# Never put secrets in source code.
