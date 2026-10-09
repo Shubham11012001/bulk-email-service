@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  bulk-email-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bulk-email-agent:latest
+    container_name: bulk-email-agent
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - email_agent_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  email_agent_data:
+    name: bulk_email_agent_data
