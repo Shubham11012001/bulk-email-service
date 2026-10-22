@@ -6,7 +6,7 @@ Fastify API
 ↓
 Campaign Service
 ↓
-SQLite persistence
+PostgreSQL persistence
 ↓
 Worker / queue loop
 ↓
@@ -18,4 +18,4 @@ Event processor
 ↓
 KPI/report service
 
-For a production deployment, SQLite can be replaced by PostgreSQL and the worker loop by Redis/BullMQ without changing the UI/API contracts substantially.
+Production-ready with PostgreSQL persistence and connection pooling. The worker loop can also be extended with Redis/BullMQ if distributed queuing across clusters is desired.

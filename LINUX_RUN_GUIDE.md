@@ -46,11 +46,11 @@ nano .env
 ```
 *(Fill in either your Gmail App Password or your Amazon SES credentials, and set `EMAIL_FROM`)*
 
-Initialize the SQLite database schema:
+Initialize the PostgreSQL database schema:
 ```bash
 npm run migrate
 ```
-*(Expected output: `Database migrated.`)*
+*(Expected output: `PostgreSQL database migrated successfully.`)*
 
 ---
 

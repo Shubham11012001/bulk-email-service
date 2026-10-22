@@ -1,12 +1,23 @@
-import Database from "better-sqlite3";
+import { Pool } from "pg";
 import dotenv from "dotenv";
+
 dotenv.config();
 
-const path = process.env.DATABASE_PATH || "./data/email-agent.db";
-import fs from "fs";
-import pathLib from "path";
-fs.mkdirSync(pathLib.dirname(path), { recursive: true });
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:postgres@localhost:5432/bulk_email_agent";
 
-export const db = new Database(path);
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+const sslConfig =
+  process.env.DATABASE_SSL === "true" ||
+  connectionString.includes("sslmode=require")
+    ? { rejectUnauthorized: false }
+    : false;
+
+export const pool = new Pool({
+  connectionString,
+  ssl: sslConfig,
+});
+
+pool.on("error", (err) => {
+  console.error("Unexpected error on idle PostgreSQL client", err);
+});

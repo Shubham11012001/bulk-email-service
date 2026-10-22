@@ -1,9 +1,9 @@
-import { db } from "../db/db";
+import { pool } from "../db/db";
 import crypto from "crypto";
 import { getEmailProvider } from "../providers/emailProvider";
 import { personalize, formatEmailBody } from "./validation";
 
-export function createCampaign(input: {
+export async function createCampaign(input: {
   name: string;
   subject: string;
   body: string;
@@ -16,69 +16,117 @@ export function createCampaign(input: {
   const now = new Date().toISOString();
   const attachmentsJson = JSON.stringify(input.attachments || []);
   const formattedBody = formatEmailBody(input.body);
-  const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO campaigns
-      (campaign_id,campaign_name,subject,body,created_at,total_recipients,valid_recipients,invalid_recipients,duplicate_recipients,attachments)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
-      campaignId, input.name, input.subject, formattedBody, now,
-      input.recipients.length + input.invalidCount + input.duplicateCount,
-      input.recipients.length, input.invalidCount, input.duplicateCount,
-      attachmentsJson
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `INSERT INTO campaigns
+        (campaign_id, campaign_name, subject, body, created_at, total_recipients, valid_recipients, invalid_recipients, duplicate_recipients, attachments)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        campaignId,
+        input.name,
+        input.subject,
+        formattedBody,
+        now,
+        input.recipients.length + input.invalidCount + input.duplicateCount,
+        input.recipients.length,
+        input.invalidCount,
+        input.duplicateCount,
+        attachmentsJson,
+      ]
     );
 
-    const recipientStmt = db.prepare(`INSERT INTO recipients(email,name,company)
-      VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name, company=excluded.company`);
-    const getRecipient = db.prepare(`SELECT id FROM recipients WHERE email=?`);
-    const crStmt = db.prepare(`INSERT INTO campaign_recipients(campaign_id,recipient_id,created_at)
-      VALUES(?,?,?)`);
-
     for (const r of input.recipients) {
-      recipientStmt.run(r.email, r.name || null, r.company || null);
-      const row = getRecipient.get(r.email) as { id: number };
-      crStmt.run(campaignId, row.id, now);
+      const recRes = await client.query(
+        `INSERT INTO recipients(email, name, company)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, company = EXCLUDED.company
+         RETURNING id`,
+        [r.email, r.name || null, r.company || null]
+      );
+      const recipientId = recRes.rows[0].id;
+
+      await client.query(
+        `INSERT INTO campaign_recipients(campaign_id, recipient_id, created_at)
+         VALUES ($1, $2, $3)`,
+        [campaignId, recipientId, now]
+      );
     }
-  });
-  tx();
-  return campaignId;
+
+    await client.query("COMMIT");
+    return campaignId;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
-export function startCampaign(campaignId: string) {
-  const campaign = db.prepare(`SELECT * FROM campaigns WHERE campaign_id=?`).get(campaignId) as any;
+export async function startCampaign(campaignId: string) {
+  const res = await pool.query(
+    `SELECT * FROM campaigns WHERE campaign_id = $1`,
+    [campaignId]
+  );
+  const campaign = res.rows[0];
   if (!campaign) throw new Error("Campaign not found");
   if (campaign.started_at) throw new Error("Campaign has already been started");
 
   const now = new Date().toISOString();
-  db.prepare(`UPDATE campaigns SET started_at=? WHERE campaign_id=?`).run(now, campaignId);
+  await pool.query(
+    `UPDATE campaigns SET started_at = $1 WHERE campaign_id = $2`,
+    [now, campaignId]
+  );
   return { campaignId, startedAt: now };
 }
 
 export async function processOne(campaignId: string) {
-  const row = db.prepare(`
+  const res = await pool.query(
+    `
     SELECT cr.*, r.email, r.name, r.company, c.subject, c.body, c.attachments
     FROM campaign_recipients cr
     JOIN recipients r ON r.id=cr.recipient_id
     JOIN campaigns c ON c.campaign_id=cr.campaign_id
-    WHERE cr.campaign_id=? AND cr.status='PENDING'
+    WHERE cr.campaign_id=$1 AND cr.status='PENDING'
     ORDER BY cr.id LIMIT 1
-  `).get(campaignId) as any;
+  `,
+    [campaignId]
+  );
+  const row = res.rows[0];
 
   if (!row) return false;
 
-  const suppressed = db.prepare(`SELECT 1 FROM suppressions WHERE email=?`).get(row.email);
-  if (suppressed) {
-    db.prepare(`UPDATE campaign_recipients SET status='UNSUBSCRIBED', failed_at=? WHERE id=?`)
-      .run(new Date().toISOString(), row.id);
+  const suppRes = await pool.query(
+    `SELECT 1 FROM suppressions WHERE email=$1`,
+    [row.email]
+  );
+  if (suppRes.rows.length > 0) {
+    await pool.query(
+      `UPDATE campaign_recipients SET status='UNSUBSCRIBED', failed_at=$1 WHERE id=$2`,
+      [new Date().toISOString(), row.id]
+    );
     return true;
   }
 
   let attachmentsList: any[] = [];
   try {
-    if (row.attachments) attachmentsList = JSON.parse(row.attachments);
+    if (row.attachments) {
+      attachmentsList =
+        typeof row.attachments === "string"
+          ? JSON.parse(row.attachments)
+          : row.attachments;
+    }
   } catch {}
 
   const provider = getEmailProvider();
   const queuedAt = new Date().toISOString();
-  db.prepare(`UPDATE campaign_recipients SET status='QUEUED', queued_at=? WHERE id=?`).run(queuedAt, row.id);
+  await pool.query(
+    `UPDATE campaign_recipients SET status='QUEUED', queued_at=$1 WHERE id=$2`,
+    [queuedAt, row.id]
+  );
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
   const trackingUrl = `${appUrl}/api/track/open/${campaignId}/${row.recipient_id}`;
@@ -91,49 +139,102 @@ export async function processOne(campaignId: string) {
     body: formatEmailBody(personalize(row.body, row)),
     idempotencyKey: `${campaignId}:${row.recipient_id}`,
     attachments: attachmentsList,
-    trackingUrl
+    trackingUrl,
   });
 
   if (!result.accepted || !result.messageId) {
-    db.prepare(`UPDATE campaign_recipients SET status='FAILED',failed_at=?,error_message=?,provider_response=? WHERE id=?`)
-      .run(new Date().toISOString(), result.error || "Provider rejected request", JSON.stringify(result.response ?? {}), row.id);
+    await pool.query(
+      `UPDATE campaign_recipients SET status='FAILED',failed_at=$1,error_message=$2,provider_response=$3 WHERE id=$4`,
+      [
+        new Date().toISOString(),
+        result.error || "Provider rejected request",
+        JSON.stringify(result.response ?? {}),
+        row.id,
+      ]
+    );
     return true;
   }
 
   if (result.delivered) {
     const now = new Date().toISOString();
-    db.prepare(`UPDATE campaign_recipients SET status='DELIVERED',message_id=?,sent_at=?,delivered_at=?,provider_response=? WHERE id=?`)
-      .run(result.messageId, now, now, JSON.stringify(result.response ?? {}), row.id);
+    await pool.query(
+      `UPDATE campaign_recipients SET status='DELIVERED',message_id=$1,sent_at=$2,delivered_at=$3,provider_response=$4 WHERE id=$5`,
+      [
+        result.messageId,
+        now,
+        now,
+        JSON.stringify(result.response ?? {}),
+        row.id,
+      ]
+    );
   } else {
-    db.prepare(`UPDATE campaign_recipients SET status='SENT',message_id=?,sent_at=?,provider_response=? WHERE id=?`)
-      .run(result.messageId, new Date().toISOString(), JSON.stringify(result.response ?? {}), row.id);
+    await pool.query(
+      `UPDATE campaign_recipients SET status='SENT',message_id=$1,sent_at=$2,provider_response=$3 WHERE id=$4`,
+      [
+        result.messageId,
+        new Date().toISOString(),
+        JSON.stringify(result.response ?? {}),
+        row.id,
+      ]
+    );
   }
   return true;
 }
 
-export function applyEvent(event: {
-  eventId: string; campaignId: string; recipientId: number; messageId: string; type: string; payload: unknown;
+export async function applyEvent(event: {
+  eventId: string;
+  campaignId: string;
+  recipientId: number;
+  messageId: string;
+  type: string;
+  payload: unknown;
 }) {
   const now = new Date().toISOString();
-  const inserted = db.prepare(`INSERT OR IGNORE INTO email_events(event_id,campaign_id,recipient_id,message_id,event_type,payload,created_at)
-    VALUES(?,?,?,?,?,?,?)`).run(event.eventId,event.campaignId,event.recipientId,event.messageId,event.type,JSON.stringify(event.payload),now);
-  if (inserted.changes === 0) return false;
+  const insertRes = await pool.query(
+    `INSERT INTO email_events(event_id,campaign_id,recipient_id,message_id,event_type,payload,created_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (event_id) DO NOTHING`,
+    [
+      event.eventId,
+      event.campaignId,
+      event.recipientId,
+      event.messageId,
+      event.type,
+      JSON.stringify(event.payload),
+      now,
+    ]
+  );
+  if (insertRes.rowCount === 0) return false;
 
-  const map: Record<string,string> = {
-    delivered: "DELIVERED", opened: "OPENED", clicked: "CLICKED",
-    failed: "FAILED", bounced: "BOUNCED", rejected: "REJECTED", unsubscribed: "UNSUBSCRIBED"
+  const map: Record<string, string> = {
+    delivered: "DELIVERED",
+    opened: "OPENED",
+    clicked: "CLICKED",
+    failed: "FAILED",
+    bounced: "BOUNCED",
+    rejected: "REJECTED",
+    unsubscribed: "UNSUBSCRIBED",
   };
   const status = map[event.type];
   if (!status) return true;
 
-  const timeCol: Record<string,string> = {
-    delivered: "delivered_at", opened: "opened_at", clicked: "clicked_at", failed: "failed_at"
+  const timeCol: Record<string, string> = {
+    delivered: "delivered_at",
+    opened: "opened_at",
+    clicked: "clicked_at",
+    failed: "failed_at",
   };
   const col = timeCol[event.type];
   if (col) {
-    db.prepare(`UPDATE campaign_recipients SET status=?, ${col}=? WHERE campaign_id=? AND recipient_id=?`).run(status, now, event.campaignId, event.recipientId);
+    await pool.query(
+      `UPDATE campaign_recipients SET status=$1, ${col}=$2 WHERE campaign_id=$3 AND recipient_id=$4`,
+      [status, now, event.campaignId, event.recipientId]
+    );
   } else {
-    db.prepare(`UPDATE campaign_recipients SET status=? WHERE campaign_id=? AND recipient_id=?`).run(status, event.campaignId, event.recipientId);
+    await pool.query(
+      `UPDATE campaign_recipients SET status=$1 WHERE campaign_id=$2 AND recipient_id=$3`,
+      [status, event.campaignId, event.recipientId]
+    );
   }
   return true;
 }

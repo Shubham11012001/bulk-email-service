@@ -14,7 +14,7 @@ echo "================================================"
 mkdir -p /app/data/attachments
 
 # 1. Run database migrations
-echo "==> Running SQLite database migrations..."
+echo "==> Running PostgreSQL database migrations..."
 node dist/db/migrate.js
 
 # 2. Start the background email worker queue

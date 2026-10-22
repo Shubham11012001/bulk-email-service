@@ -1,16 +1,9 @@
 # ===================================================
-# Stage 1: Build TypeScript and compile native addons
+# Stage 1: Build TypeScript
 # ===================================================
 FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
-
-# Install native dependencies required for better-sqlite3 compilation
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy package manifests first to leverage Docker layer caching
 COPY package.json package-lock.json ./
@@ -43,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_PATH=/app/data/email-agent.db
+ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bulk_email_agent
 
 # Copy package.json and pre-compiled node_modules from builder
 COPY package.json ./
@@ -55,13 +48,13 @@ COPY --from=builder /app/public ./public
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-# Create persistent data volume directory
-RUN mkdir -p /app/data
+# Create attachments directory
+RUN mkdir -p /app/data/attachments
 
 EXPOSE 3000
 
-# Mountable volume for SQLite database & uploaded attachments
-VOLUME ["/app/data"]
+# Mountable volume for uploaded attachments
+VOLUME ["/app/data/attachments"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1

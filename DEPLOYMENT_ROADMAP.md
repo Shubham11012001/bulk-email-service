@@ -21,7 +21,7 @@ This guide walks you through containerizing the **Bulk Email Agent**, pushing th
   │
   ├── 3. Install Docker & configure Security Group (Open Port 3000)
   ├── 4. Create persistent volume & .env file
-  └── 5. Run container (Auto-migrates SQLite + starts Server & Worker)
+  └── 5. Run container / compose (Auto-migrates PostgreSQL + starts Server & Worker)
             │
             ▼
 [ Access Application ]
@@ -189,11 +189,17 @@ BATCH_SIZE=10
 WORKER_INTERVAL_MS=2000
 ```
 
-### 2. Run the Container with Volume Persistence
+### 2. Run with Docker Compose (Recommended)
 
 ```bash
-# Create local directory on EC2 host for SQLite DB and attachments
-mkdir -p ~/email-agent/data
+# Starts both PostgreSQL and Bulk Email Agent with persistent volumes
+docker compose up -d
+```
+
+Or run standalone with an external PostgreSQL database (AWS RDS, Neon, Supabase):
+```bash
+# Create local directory on host for attachments
+mkdir -p ~/email-agent/data/attachments
 
 # Run the container
 docker run -d \
@@ -201,12 +207,13 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   --env-file .env \
-  -v ~/email-agent/data:/app/data \
+  -e DATABASE_URL="postgresql://user:pass@your-rds-host:5432/bulk_email_agent" \
+  -v ~/email-agent/data/attachments:/app/data/attachments \
   your-dockerhub-username/bulk-email-agent:latest
 ```
 
-> 💡 **Why `-v ~/email-agent/data:/app/data` is essential**:
-> It maps the container's SQLite database and attachments to the EC2 host. If the container restarts or you update the image, **all your campaigns, recipient tables, and KPI analytics persist safely**!
+> 💡 **Why persistent volumes matter**:
+> Persistent volumes keep all your uploaded attachments safe across container rebuilds, while PostgreSQL manages campaign states, recipients, and KPI analytics reliably!
 
 ---
 

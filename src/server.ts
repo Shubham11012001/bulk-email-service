@@ -7,7 +7,7 @@ import fastifyStatic from "@fastify/static";
 import fs from "fs";
 import path from "path";
 import * as XLSX from "xlsx";
-import { db } from "./db/db";
+import { pool } from "./db/db";
 import { getEmailProvider, getActiveProviderName, setActiveProviderName, getProviderConfigStatus } from "./providers/emailProvider";
 import { validateRecipients, formatEmailBody } from "./services/validation";
 import { createCampaign, startCampaign, applyEvent } from "./services/campaignService";
@@ -108,18 +108,28 @@ app.get("/api/track/open/:campaignId/:recipientId", async (req, reply) => {
   const numRecipientId = Number(recipientId);
 
   try {
-    const row = db.prepare(`SELECT * FROM campaign_recipients WHERE campaign_id=? AND recipient_id=?`).get(campaignId, numRecipientId) as any;
+    const rowRes = await pool.query(
+      `SELECT * FROM campaign_recipients WHERE campaign_id=$1 AND recipient_id=$2`,
+      [campaignId, numRecipientId]
+    );
+    const row = rowRes.rows[0];
     if (row) {
       const now = new Date().toISOString();
       const nextStatus = (row.status === 'CLICKED' || row.status === 'UNSUBSCRIBED') ? row.status : 'OPENED';
-      db.prepare(`UPDATE campaign_recipients SET status=?, opened_at=COALESCE(opened_at,?) WHERE campaign_id=? AND recipient_id=?`)
-        .run(nextStatus, now, campaignId, numRecipientId);
+      await pool.query(
+        `UPDATE campaign_recipients SET status=$1, opened_at=COALESCE(opened_at,$2) WHERE campaign_id=$3 AND recipient_id=$4`,
+        [nextStatus, now, campaignId, numRecipientId]
+      );
 
       const eventId = `open_${campaignId}_${numRecipientId}_${Date.now()}`;
-      db.prepare(`INSERT OR IGNORE INTO email_events(event_id,campaign_id,recipient_id,message_id,event_type,payload,created_at)
-        VALUES(?,?,?,?,?,?,?)`).run(eventId, campaignId, numRecipientId, row.message_id || null, 'opened', JSON.stringify({ ip: req.ip, userAgent: req.headers['user-agent'] }), now);
+      await pool.query(
+        `INSERT INTO email_events(event_id,campaign_id,recipient_id,message_id,event_type,payload,created_at)
+         VALUES($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (event_id) DO NOTHING`,
+        [eventId, campaignId, numRecipientId, row.message_id || null, 'opened', JSON.stringify({ ip: req.ip, userAgent: req.headers['user-agent'] }), now]
+      );
 
-      refreshKpis(campaignId);
+      await refreshKpis(campaignId);
     }
   } catch (e) {
     req.log.error(e);
@@ -140,13 +150,19 @@ app.get("/api/track/open/:campaignId/:recipientId", async (req, reply) => {
 app.post("/api/campaigns/:id/recipients/:recipientId/open", async (req, reply) => {
   const { id: campaignId, recipientId } = req.params as any;
   const numRecipientId = Number(recipientId);
-  const row = db.prepare(`SELECT * FROM campaign_recipients WHERE campaign_id=? AND recipient_id=?`).get(campaignId, numRecipientId) as any;
+  const rowRes = await pool.query(
+    `SELECT * FROM campaign_recipients WHERE campaign_id=$1 AND recipient_id=$2`,
+    [campaignId, numRecipientId]
+  );
+  const row = rowRes.rows[0];
   if (!row) return reply.code(404).send({ error: "Recipient not found in campaign" });
 
   const now = new Date().toISOString();
-  db.prepare(`UPDATE campaign_recipients SET status='OPENED', opened_at=COALESCE(opened_at,?) WHERE campaign_id=? AND recipient_id=?`)
-    .run(now, campaignId, numRecipientId);
-  refreshKpis(campaignId);
+  await pool.query(
+    `UPDATE campaign_recipients SET status='OPENED', opened_at=COALESCE(opened_at,$1) WHERE campaign_id=$2 AND recipient_id=$3`,
+    [now, campaignId, numRecipientId]
+  );
+  await refreshKpis(campaignId);
   return { ok: true, campaignId, recipientId: numRecipientId, openedAt: now };
 });
 
@@ -181,7 +197,7 @@ app.post("/api/campaigns", async (req, reply) => {
   if (!body?.name || !body?.subject || !body?.body || !Array.isArray(body?.recipients))
     return reply.code(400).send({ error: "name, subject, body and recipients are required" });
   const checked = validateRecipients(body.recipients);
-  const campaignId = createCampaign({
+  const campaignId = await createCampaign({
     name: body.name, subject: body.subject, body: body.body,
     recipients: checked.valid, invalidCount: checked.invalid.length, duplicateCount: checked.duplicates.length,
     attachments: body.attachments || []
@@ -189,33 +205,36 @@ app.post("/api/campaigns", async (req, reply) => {
   return { campaignId, validation: { valid: checked.valid.length, invalid: checked.invalid.length, duplicates: checked.duplicates.length } };
 });
 
-app.get("/api/campaigns", async () => db.prepare(`SELECT * FROM campaigns ORDER BY created_at DESC`).all());
+app.get("/api/campaigns", async () => {
+  const res = await pool.query(`SELECT * FROM campaigns ORDER BY created_at DESC`);
+  return res.rows;
+});
 
 app.get("/api/campaigns/:id", async (req, reply) => {
   const id = (req.params as any).id;
-  const campaign = getCampaign(id);
+  const campaign = await getCampaign(id);
   if (!campaign) return reply.code(404).send({ error: "Campaign not found" });
-  refreshKpis(id);
-  return getCampaign(id);
+  await refreshKpis(id);
+  return await getCampaign(id);
 });
 
 app.post("/api/campaigns/:id/start", async (req, reply) => {
-  try { return startCampaign((req.params as any).id); }
+  try { return await startCampaign((req.params as any).id); }
   catch (e: any) { return reply.code(400).send({ error: e.message }); }
 });
 
-app.get("/api/campaigns/:id/recipients", async (req) => getRecipients((req.params as any).id));
+app.get("/api/campaigns/:id/recipients", async (req) => await getRecipients((req.params as any).id));
 
 app.get("/api/campaigns/:id/report.csv", async (req, reply) => {
   reply.header("Content-Type","text/csv");
   reply.header("Content-Disposition", `attachment; filename="${(req.params as any).id}.csv"`);
-  return csvReport((req.params as any).id);
+  return await csvReport((req.params as any).id);
 });
 
 app.get("/api/campaigns/:id/report.xlsx", async (req, reply) => {
   reply.header("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   reply.header("Content-Disposition", `attachment; filename="${(req.params as any).id}.xlsx"`);
-  return xlsxReport((req.params as any).id);
+  return await xlsxReport((req.params as any).id);
 });
 
 app.post("/api/webhooks/:provider", async (req) => {
@@ -225,18 +244,28 @@ app.post("/api/webhooks/:provider", async (req) => {
   for (const e of events) {
     const eventId = e.eventId || e.id;
     if (!eventId) continue;
-    db.prepare(`INSERT OR IGNORE INTO webhook_events(provider,event_id,payload,created_at) VALUES(?,?,?,?)`)
-      .run((req.params as any).provider,eventId,JSON.stringify(e),new Date().toISOString());
-    const row = db.prepare(`SELECT campaign_id,recipient_id FROM campaign_recipients WHERE message_id=?`).get(e.messageId) as any;
-    if (row) results.push(applyEvent({ eventId, campaignId: row.campaign_id, recipientId: row.recipient_id, messageId: e.messageId, type: e.type, payload: e }));
+    await pool.query(
+      `INSERT INTO webhook_events(provider,event_id,payload,created_at) VALUES($1,$2,$3,$4) ON CONFLICT (event_id) DO NOTHING`,
+      [(req.params as any).provider, eventId, JSON.stringify(e), new Date().toISOString()]
+    );
+    const rowRes = await pool.query(
+      `SELECT campaign_id,recipient_id FROM campaign_recipients WHERE message_id=$1`,
+      [e.messageId]
+    );
+    const row = rowRes.rows[0];
+    if (row) results.push(await applyEvent({ eventId, campaignId: row.campaign_id, recipientId: row.recipient_id, messageId: e.messageId, type: e.type, payload: e }));
   }
   return { processed: results.filter(Boolean).length };
 });
 
 app.post("/api/suppressions", async (req) => {
   const b = req.body as any;
-  db.prepare(`INSERT OR REPLACE INTO suppressions(email,reason,created_at) VALUES(?,?,?)`)
-    .run(String(b.email).toLowerCase().trim(), b.reason || "manual", new Date().toISOString());
+  await pool.query(
+    `INSERT INTO suppressions(email,reason,created_at)
+     VALUES($1,$2,$3)
+     ON CONFLICT (email) DO UPDATE SET reason = EXCLUDED.reason, created_at = EXCLUDED.created_at`,
+    [String(b.email).toLowerCase().trim(), b.reason || "manual", new Date().toISOString()]
+  );
   return { ok: true };
 });
 

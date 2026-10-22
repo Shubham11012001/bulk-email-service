@@ -19,7 +19,7 @@ A local, production-oriented foundation based on the supplied specification.
 - KPI dashboard
 - Recipient status table
 - CSV and XLSX campaign reports
-- SQLite persistence for easy local startup
+- PostgreSQL persistence for high concurrency & scalable email workflows
 - CLI commands
 - Automated tests
 - No credentials stored in source code
@@ -28,6 +28,7 @@ A local, production-oriented foundation based on the supplied specification.
 
 - Node.js 20+
 - npm
+- PostgreSQL (or Docker)
 
 ## Run
 
