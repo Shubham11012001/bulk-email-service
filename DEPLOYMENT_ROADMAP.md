@@ -1,311 +1,284 @@
-# End-to-End Docker Deployment Roadmap: AWS EC2
+# EC2 Direct Docker Deployment Guide
 
-This guide walks you through containerizing the **Bulk Email Agent**, pushing the image to a container registry, deploying it onto an **AWS Linux EC2 instance**, and accessing it via its **Public** or **Private IP**.
+A streamlined guide to deploying the **Bulk Email Agent** directly on an **AWS EC2 instance** using Docker — **without pushing to any external container registry (Docker Hub, ECR, etc.)**.
 
 ---
 
-## 🗺️ High-Level Deployment Workflow
+## 📋 Overview of the Workflow
+
+Everything builds and runs directly on your EC2 instance:
 
 ```
-[ Local Machine / CI ]
-  │
-  ├── 1. Build Docker image (with --platform linux/amd64 for EC2)
-  │
-  └── 2. Push to Docker Hub or AWS ECR
-            │
-            ▼
-[ Container Registry (Docker Hub / AWS ECR) ]
-            │
-            ▼ (docker pull)
-[ AWS EC2 Linux Instance ]
-  │
-  ├── 3. Install Docker & configure Security Group (Open Port 3000)
-  ├── 4. Create persistent volume & .env file
-  └── 5. Run container / compose (Auto-migrates PostgreSQL + starts Server & Worker)
-            │
-            ▼
-[ Access Application ]
-  ├── Public IP:  http://<EC2_PUBLIC_IP>:3000
-  └── Private IP: http://<EC2_PRIVATE_IP>:3000
+[ Your Local Machine ]
+        │
+        ▼ (Git Clone or rsync / scp)
+[ AWS EC2 Instance (Docker Installed) ]
+        │
+        ├── 1. Configure .env file (SMTP / SES credentials & DB URL)
+        │
+        ├── 2. Build Docker Image locally on EC2 (no remote push)
+        │
+        └── 3. Launch via Docker Compose (or Standalone Docker Run)
+                  │
+                  ├── Auto-waits for PostgreSQL connection
+                  ├── Auto-executes DB migrations (creates tables & indexes)
+                  ├── Starts background email worker (worker.js)
+                  └── Starts Fastify web server (server.js)
 ```
 
 ---
 
-## Phase 1: Build the Docker Image
+## Step 1: Open Port 3000 in EC2 Security Group
 
-Run these commands in your project root on your local machine:
+Before testing in the browser, ensure your EC2 instance allows incoming traffic on port `3000`.
 
-```bash
-# 1. Define your Docker Hub username and image tag
-DOCKER_USERNAME="your-dockerhub-username"
-IMAGE_NAME="bulk-email-agent"
-TAG="v1.0.0"
+1. Go to **AWS Management Console** → **EC2** → **Instances**.
+2. Select your instance and click the **Security** tab.
+3. Click on the attached **Security Group** → **Edit inbound rules**.
+4. Add the following rule and click **Save rules**:
 
-# 2. Build the image
-# IMPORTANT: If building on an Apple Silicon (M1/M2/M3) Mac for an x86 EC2 instance,
-# you MUST specify --platform linux/amd64 to avoid "exec format error" on AWS.
-docker build --platform linux/amd64 -t ${DOCKER_USERNAME}/${IMAGE_NAME}:${TAG} -t ${DOCKER_USERNAME}/${IMAGE_NAME}:latest .
-```
-
----
-
-## Phase 2: Push Image to Container Registry
-
-### Option A: Using Docker Hub (Simplest)
-
-```bash
-# 1. Log in to Docker Hub
-docker login
-
-# 2. Push the tagged image
-docker push ${DOCKER_USERNAME}/${IMAGE_NAME}:${TAG}
-docker push ${DOCKER_USERNAME}/${IMAGE_NAME}:latest
-```
-
-### Option B: Using AWS ECR (Elastic Container Registry)
-
-```bash
-AWS_REGION="us-east-1"
-AWS_ACCOUNT_ID="123456789012"
-ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/bulk-email-agent"
-
-# 1. Authenticate Docker with your AWS ECR registry
-aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-# 2. Create the repository in ECR (if it does not exist)
-aws ecr create-repository --repository-name bulk-email-agent --region ${AWS_REGION} || true
-
-# 3. Tag and push
-docker tag ${DOCKER_USERNAME}/${IMAGE_NAME}:latest ${ECR_REPO}:latest
-docker push ${ECR_REPO}:latest
-```
-
----
-
-## Phase 3: Launch & Configure AWS EC2 Instance
-
-### 1. Launch Instance in AWS Console:
-- **AMI**: **Amazon Linux 2023** (or **Ubuntu 24.04 / 22.04 LTS**)
-- **Architecture**: **64-bit (x86)**
-- **Instance Type**: `t3.micro` or `t3.small` (Free tier eligible or low cost)
-- **Key Pair**: Select or create your `.pem` key pair (e.g. `my-key.pem`)
-
-### 2. Configure AWS Security Group (CRITICAL)
-In the **Security Group Inbound Rules**, add the following rules:
-
-| Type | Protocol | Port Range | Source | Purpose |
+| Type | Protocol | Port Range | Source | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **SSH** | TCP | `22` | `My IP` | Secure terminal access |
-| **Custom TCP** | TCP | `3000` | `0.0.0.0/0` (or your VPC CIDR) | **Web UI & REST API** |
-
-> ⚠️ **Important**: If Port `3000` is not opened in your AWS Security Group, requests to the Public IP will time out!
+| **Custom TCP** | TCP | `3000` | `0.0.0.0/0` (or your company IP / VPC) | Bulk Email Web UI & API |
+| **SSH** | TCP | `22` | `My IP` | Terminal access |
 
 ---
 
-## Phase 4: Setup EC2 & Pull Image
+## Step 2: Copy the Project Code to EC2
 
-SSH into your EC2 instance from your terminal:
-
+Log in to your EC2 instance via SSH:
 ```bash
-# For Amazon Linux 2023:
-ssh -i /path/to/my-key.pem ec2-user@<EC2_PUBLIC_IP>
-
-# For Ubuntu:
-# ssh -i /path/to/my-key.pem ubuntu@<EC2_PUBLIC_IP>
+ssh -i /path/to/your-key.pem ubuntu@<EC2_PUBLIC_IP>
+# Or for Amazon Linux:
+# ssh -i /path/to/your-key.pem ec2-user@<EC2_PUBLIC_IP>
 ```
 
-### 1. Install & Start Docker on the EC2 Instance
-
-#### On Amazon Linux 2023:
+### Option A: Via Git (Recommended)
 ```bash
-sudo dnf update -y
-sudo dnf install -y docker
-sudo systemctl enable --now docker
-sudo usermod -aG docker ec2-user
-
-# Apply docker group changes without logging out:
-newgrp docker
+cd ~
+git clone <YOUR_GIT_REPOSITORY_URL> bulk-email-agent
+cd bulk-email-agent
 ```
 
-#### On Ubuntu:
+### Option B: Via SCP from your Local Machine
+If your code is only stored locally, run this command **from your local computer**:
 ```bash
-sudo apt-get update -y
-sudo apt-get install -y docker.io
-sudo systemctl enable --now docker
-sudo usermod -aG docker ubuntu
-newgrp docker
+scp -i /path/to/your-key.pem -r /path/to/bulk-email-agent ubuntu@<EC2_PUBLIC_IP>:~/bulk-email-agent
 ```
 
-### 2. Log in and Pull Your Image
-
+Then switch back to your EC2 terminal:
 ```bash
-# If using Docker Hub:
-docker pull your-dockerhub-username/bulk-email-agent:latest
-
-# If using AWS ECR:
-# aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
-# docker pull <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/bulk-email-agent:latest
+cd ~/bulk-email-agent
 ```
 
 ---
 
-## Phase 5: Run the Docker Container
+## Step 3: Configure Environment Variables (`.env`)
 
-### 1. Create a Project Directory & `.env` file on EC2
-
+Create the production `.env` file from the example:
 ```bash
-mkdir -p ~/email-agent && cd ~/email-agent
-nano .env
+cp .env.example .env
+nano .env   # or vim .env
 ```
 
-Paste your configuration into `.env`:
+Set your configuration values:
 
 ```env
+# Server
 PORT=3000
-DATABASE_PATH=/app/data/email-agent.db
+NODE_ENV=production
+APP_URL=http://<EC2_PUBLIC_IP>:3000
 
-# Choose active provider: 'gmail' or 'ses' (toggleable in UI)
-EMAIL_PROVIDER=gmail
+# Active Email Provider: 'gmail', 'ses', or 'mock'
+EMAIL_PROVIDER=mock
 
-# Common Sender Email (Must be verified in AWS SES if using SES)
-EMAIL_FROM=your_email@gmail.com
-EMAIL_FROM_NAME=Bulk Email Agent
-
-# Option A: Gmail SMTP Settings
+# ==========================================
+# IF USING GMAIL SMTP:
+# ==========================================
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
-SMTP_SECURE=true
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_16_char_google_app_password
+EMAIL_FROM=your_email@gmail.com
+EMAIL_FROM_NAME="Bulk Email Agent"
 
-# Option B: Amazon SES Settings
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
+# ==========================================
+# IF USING AMAZON SES:
+# ==========================================
+# Option 1: AWS API Keys
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_REGION=us-east-1
 
-# Rate limiting
-MAX_EMAILS_PER_MINUTE=30
-BATCH_SIZE=10
-WORKER_INTERVAL_MS=2000
+# Option 2: SES SMTP Credentials
+# SES_SMTP_USER=your_ses_smtp_user
+# SES_SMTP_PASS=your_ses_smtp_password
+# SES_SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+# SES_SMTP_PORT=465
 ```
 
-### 2. Run with Docker Compose (Recommended)
-
-```bash
-# Starts both PostgreSQL and Bulk Email Agent with persistent volumes
-docker compose up -d
-```
-
-Or run standalone with an external PostgreSQL database (AWS RDS, Neon, Supabase):
-```bash
-# Create local directory on host for attachments
-mkdir -p ~/email-agent/data/attachments
-
-# Run the container
-docker run -d \
-  --name bulk-email-agent \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  --env-file .env \
-  -e DATABASE_URL="postgresql://user:pass@your-rds-host:5432/bulk_email_agent" \
-  -v ~/email-agent/data/attachments:/app/data/attachments \
-  your-dockerhub-username/bulk-email-agent:latest
-```
-
-> 💡 **Why persistent volumes matter**:
-> Persistent volumes keep all your uploaded attachments safe across container rebuilds, while PostgreSQL manages campaign states, recipients, and KPI analytics reliably!
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X` in nano).
 
 ---
 
-## Phase 6: Verify & Access the Application
+## Step 4: Run the Application with Docker
 
-### 1. Verify Locally on the EC2 Instance (via curl)
+Choose the scenario matching your PostgreSQL setup:
+
+---
+
+### Scenario A: Full Stack with Docker Compose (Recommended)
+*Use this if you want Docker to run both PostgreSQL and the application container with persistent storage on EC2.*
 
 ```bash
-# Check container status
+# Build the image locally and start PostgreSQL + App in the background
+docker compose up -d --build
+```
+
+#### What happens automatically:
+1. Docker builds the application image directly on your EC2 instance.
+2. PostgreSQL 16 container starts up and initializes `postgres_data` volume.
+3. The app container waits for PostgreSQL to pass the health check (`pg_isready`).
+4. **Auto-Migration:** The container automatically executes `node dist/db/migrate.js` to create all 6 tables and indexes.
+5. Starts the **background email worker** (`worker.js`).
+6. Starts the **Fastify API & Dashboard** (`server.js`) on port `3000`.
+
+---
+
+### Scenario B: Connect to an Existing Database (AWS RDS or External PG)
+*Use this if you already have an existing PostgreSQL database on RDS or installed on EC2.*
+
+1. In your `.env` file, point `DATABASE_URL` to your database:
+   ```env
+   DATABASE_URL=postgresql://dbuser:dbpassword@your-rds-endpoint.rds.amazonaws.com:5432/bulk_email_agent
+   ```
+
+2. Build the Docker image locally on EC2:
+   ```bash
+   docker build -t bulk-email-agent:latest .
+   ```
+
+3. Run the container:
+   ```bash
+   docker run -d \
+     --name bulk-email-agent \
+     --restart unless-stopped \
+     -p 3000:3000 \
+     --env-file .env \
+     -v email_agent_attachments:/app/data/attachments \
+     bulk-email-agent:latest
+   ```
+
+*(The container entrypoint will still automatically ping your database, run all migrations, and start both the worker and web server).*
+
+---
+
+## Step 5: Verify Deployment
+
+### 1. Check Container Status
+```bash
 docker ps
+```
+You should see `bulk-email-agent` and `bulk-email-postgres` with `STATUS: Up (healthy)`.
 
-# Check container logs
-docker logs bulk-email-agent
-
-# Test server health
-curl -s http://localhost:3000/api/health
-# Expected: {"ok":true,"provider":"gmail"}
+### 2. View Live Startup & Migration Logs
+```bash
+docker compose logs -f bulk-email-agent
+# Or for standalone docker:
+# docker logs -f bulk-email-agent
 ```
 
-### 2. Access via Public IP (Browser)
-
-Open your web browser and navigate to:
+You should see:
+```text
+==========================================================
+ 🚀 Starting Bulk Email Agent Services
+==========================================================
+==> Step 1: Waiting for PostgreSQL connection...
+✅ Database connection established!
+==> Step 2: Executing database migrations...
+PostgreSQL database migrated successfully.
+✅ Migrations completed successfully!
+==> Step 3: Starting background email worker queue...
+    Worker running (PID: 18)
+==> Step 4: Starting Fastify server on port 3000...
+    Server running (PID: 23)
+==========================================================
+ Application is online at http://0.0.0.0:3000
+==========================================================
+Worker running...
+{"level":30,"time":...,"msg":"Server listening at http://0.0.0.0:3000"}
 ```
+
+### 3. Test Health Endpoint Locally on EC2
+```bash
+curl http://localhost:3000/api/health
+```
+Expected output:
+```json
+{"ok":true,"provider":"mock"}
+```
+
+### 4. Access the Dashboard in your Browser
+Open your browser and navigate to:
+```text
 http://<EC2_PUBLIC_IP>:3000
 ```
 
-You will see the full web dashboard:
-- **Interactive Provider Switcher**: Toggle between `[ ✉️ Gmail SMTP ]` and `[ ⚡ Amazon SES ]`.
-- **Recipient Import**: Upload `.xlsx` / `.csv` or paste lists.
-- **Dual Mode Editor**: Write rich text or paste raw HTML code.
-- **Real-time KPI Dashboard**: Track deliveries, opens, bounces, and clicks.
+---
 
-### 3. Access via Private IP (Within VPC / Private Subnet)
+## Step 6: Verify Database Tables (Optional)
 
-If accessing from another EC2 instance, VPN, or Bastion inside the same AWS VPC:
+If you want to inspect the generated schema inside the PostgreSQL container:
+
 ```bash
-curl -s http://<EC2_PRIVATE_IP>:3000/api/health
+docker exec -it bulk-email-postgres psql -U postgres -d bulk_email_agent -c "\dt"
 ```
-Or open in a browser connected to your corporate AWS VPN / DirectConnect:
-```
-http://<EC2_PRIVATE_IP>:3000
+
+Output:
+```text
+               List of relations
+ Schema |        Name         | Type  |  Owner   
+--------+---------------------+-------+----------
+ public | campaign_recipients | table | postgres
+ public | campaigns           | table | postgres
+ public | email_events        | table | postgres
+ public | recipients          | table | postgres
+ public | suppressions        | table | postgres
+ public | webhook_events      | table | postgres
+(6 rows)
 ```
 
 ---
 
-## Phase 7: Useful Management Commands
+## 🛠️ Common Operations & Maintenance
 
-### View Live Logs:
+### How to Stop the Application
 ```bash
-docker logs -f bulk-email-agent
+docker compose down
+```
+*(Your database data and uploaded attachments are preserved in Docker named volumes).*
+
+### How to Restart Services
+```bash
+docker compose restart
 ```
 
-### Restart Container:
+### How to Apply Code Changes / Rebuild on EC2
+Whenever you update code on EC2 (e.g. after `git pull`):
 ```bash
-docker restart bulk-email-agent
+# Rebuild image locally and restart containers with zero downtime
+docker compose up -d --build
+```
+The entrypoint will rerun migrations automatically (any new columns or indexes will be added safely via `IF NOT EXISTS`), and the new server and worker will spin up immediately.
+
+### View Real-Time Worker Logs
+To watch emails being processed in real time:
+```bash
+docker compose logs -f bulk-email-agent | grep -E "(Worker|campaign|sent|failed)"
 ```
 
-### Stop / Start Container:
+### Backup Database
+To dump the PostgreSQL database to a `.sql` file:
 ```bash
-docker stop bulk-email-agent
-docker start bulk-email-agent
+docker exec bulk-email-postgres pg_dump -U postgres bulk_email_agent > backup_$(date +%F).sql
 ```
-
-### Update to a New Image Version:
-```bash
-# 1. Pull the updated image
-docker pull your-dockerhub-username/bulk-email-agent:latest
-
-# 2. Stop and remove the old container
-docker stop bulk-email-agent
-docker rm bulk-email-agent
-
-# 3. Launch with the new image (data remains intact in ~/email-agent/data)
-docker run -d \
-  --name bulk-email-agent \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  --env-file .env \
-  -v ~/email-agent/data:/app/data \
-  your-dockerhub-username/bulk-email-agent:latest
-```
-
----
-
-## 🛠️ Troubleshooting Checklist
-
-1. **Browser times out when opening `http://<EC2_PUBLIC_IP>:3000`**:
-   - Check the **AWS Security Group** attached to your EC2 instance. Ensure there is an Inbound Rule for **Custom TCP**, Port **3000**, Source **`0.0.0.0/0`**.
-   - Check if your EC2 instance has an **Auto-assigned Public IP** (in VPC Subnet settings).
-2. **Container exits immediately**:
-   - Run `docker logs bulk-email-agent`.
-   - Ensure the mounted volume directory has write permissions: `chmod 777 ~/email-agent/data`.
-3. **Amazon SES fails to send**:
-   - Check if your AWS account is in the **SES Sandbox**. In sandbox mode, both sender and recipient emails must be verified in the AWS Console.
-   - Run `curl -s -X POST http://localhost:3000/api/provider/verify -H "Content-Type: application/json"` to test credentials.
