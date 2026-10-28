@@ -218,6 +218,21 @@ export async function applyEvent(event: {
   const status = map[event.type];
   if (!status) return true;
 
+  const currentRes = await pool.query(
+    `SELECT status, delivered_at, opened_at, clicked_at FROM campaign_recipients WHERE campaign_id=$1 AND recipient_id=$2`,
+    [event.campaignId, event.recipientId]
+  );
+  const current = currentRes.rows[0];
+  if (!current) return true;
+
+  // Prevent status regression (e.g. DELIVERED event overwriting OPENED or CLICKED)
+  let nextStatus = status;
+  if (['OPENED', 'CLICKED'].includes(current.status) && status === 'DELIVERED') {
+    nextStatus = current.status;
+  } else if (current.status === 'CLICKED' && status === 'OPENED') {
+    nextStatus = 'CLICKED';
+  }
+
   const timeCol: Record<string, string> = {
     delivered: "delivered_at",
     opened: "opened_at",
@@ -227,13 +242,13 @@ export async function applyEvent(event: {
   const col = timeCol[event.type];
   if (col) {
     await pool.query(
-      `UPDATE campaign_recipients SET status=$1, ${col}=$2 WHERE campaign_id=$3 AND recipient_id=$4`,
-      [status, now, event.campaignId, event.recipientId]
+      `UPDATE campaign_recipients SET status=$1, ${col}=COALESCE(${col},$2) WHERE campaign_id=$3 AND recipient_id=$4`,
+      [nextStatus, now, event.campaignId, event.recipientId]
     );
   } else {
     await pool.query(
       `UPDATE campaign_recipients SET status=$1 WHERE campaign_id=$2 AND recipient_id=$3`,
-      [status, event.campaignId, event.recipientId]
+      [nextStatus, event.campaignId, event.recipientId]
     );
   }
   return true;

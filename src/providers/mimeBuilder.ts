@@ -10,7 +10,7 @@ export function buildRawMimeEmail(input: SendInput, fromHeader: string, messageI
   }
 
   if (input.trackingUrl) {
-    const pixelTag = `<img src="${input.trackingUrl}" width="1" height="1" style="display:none !important;" alt="" />`;
+    const pixelTag = `<img src="${input.trackingUrl}" width="1" height="1" border="0" alt="" style="display:block; width:1px !important; min-width:1px !important; height:1px !important; min-height:1px !important; border:0 !important; margin:0 !important; padding:0 !important; outline:none !important;" />`;
     if (fullHtml.includes("</body>")) {
       fullHtml = fullHtml.replace("</body>", `${pixelTag}</body>`);
     } else {
